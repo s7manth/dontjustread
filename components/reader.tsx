@@ -48,10 +48,22 @@ export function Reader({ bookId }: ReaderProps) {
           return;
         }
 
+        const fileContents = await file.arrayBuffer();
+        const arr = new Uint8Array(fileContents).subarray(0, 2);
+        let header = "";
+        for (let i = 0; i < arr.length; i++) {
+          header += arr[i].toString(16);
+        }
+        if (header !== "504b") {
+          throw new Error("Invalid file: not an epub book");
+        }
+
         console.log("Book file retrieved:", file);
 
         console.log("Creating new ePub instance: ", file);
-        const newBook = new EPub(file);
+        const newBook = new EPub(fileContents, {
+          encoding: "epub",
+        });
 
         console.log("Waiting for book to be ready");
         await new Promise<void>((resolve, reject) => {
@@ -87,15 +99,7 @@ export function Reader({ bookId }: ReaderProps) {
         });
 
         console.log("Waiting for rendition to be ready");
-        await new Promise<void>((resolve) => {
-          newRendition.on("rendered", () => {
-            console.log("Rendition rendered event fired");
-            resolve();
-          });
-
-          setTimeout(resolve, 1000);
-        });
-
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         setRendition(newRendition);
 
         // Get the spine items (chapters) and display the first content chapter instead of cover
@@ -154,15 +158,52 @@ export function Reader({ bookId }: ReaderProps) {
 
   const handlePrevious = () => {
     if (rendition) {
-      rendition.prev();
+      // Add a CSS transition to make page changes smoother
+      if (viewerRef.current) {
+        viewerRef.current.style.opacity = "0.3";
+        viewerRef.current.style.transition = "opacity 0.1s ease-in-out";
+
+        setTimeout(() => {
+          rendition.prev();
+          setTimeout(() => {
+            if (viewerRef.current) {
+              viewerRef.current.style.opacity = "1";
+            }
+          }, 50);
+        }, 50);
+      } else {
+        rendition.prev();
+      }
     }
   };
 
   const handleNext = () => {
     if (rendition) {
-      rendition.next();
+      // Add a CSS transition to make page changes smoother
+      if (viewerRef.current) {
+        viewerRef.current.style.opacity = "0.3";
+        viewerRef.current.style.transition = "opacity 0.1s ease-in-out";
+
+        setTimeout(() => {
+          rendition.next();
+          setTimeout(() => {
+            if (viewerRef.current) {
+              viewerRef.current.style.opacity = "1";
+            }
+          }, 50);
+        }, 50);
+      } else {
+        rendition.next();
+      }
     }
   };
+
+  // Add initial styles to the viewer ref when the component mounts
+  useEffect(() => {
+    if (viewerRef.current) {
+      viewerRef.current.style.transition = "opacity 0.1s ease-in-out";
+    }
+  }, []);
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -171,23 +212,27 @@ export function Reader({ bookId }: ReaderProps) {
         <ReaderSettings settings={settings} onUpdate={updateSettings} />
         <Button onClick={handleNext}>Next</Button>
       </div>
-      <div className="flex flex-col">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-          </div>
-        )}
-        {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-            <div className="bg-destructive text-destructive-foreground p-4 rounded-md max-w-md">
-              <h3 className="font-bold mb-2">Error Loading Book</h3>
-              <p>{error}</p>
-            </div>
-          </div>
-        )}
-      </div>
 
-      <div ref={viewerRef} className="h-full w-full" />
+      {/* Add a background color that matches your theme to reduce the flash effect */}
+      <div className="flex-1 relative bg-background">
+        <div className="flex flex-col">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          )}
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+              <div className="bg-destructive text-destructive-foreground p-4 rounded-md max-w-md">
+                <h3 className="font-bold mb-2">Error Loading Book</h3>
+                <p>{error}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div ref={viewerRef} className="h-full w-full" />
+      </div>
     </div>
   );
 }

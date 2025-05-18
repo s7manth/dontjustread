@@ -92,7 +92,7 @@ export function FileUploader({
     <div className="space-y-4">
       <FileUpload
         maxFiles={1}
-        maxSize={50 * 1024 * 1024} // 50MB max for ePub files
+        maxSize={50 * 1024 * 1024}
         className="w-full"
         value={files}
         onValueChange={setFiles}

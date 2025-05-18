@@ -26,7 +26,7 @@ export function Header() {
             Add a book
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Upload a book</DialogTitle>
           </DialogHeader>

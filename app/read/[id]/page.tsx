@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Reader } from "@/components/reader";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import { openDB } from "idb";
 
 interface BookItem {
   id: string;
@@ -18,29 +19,33 @@ interface BookItem {
 export default function ReadPage() {
   const params = useParams();
   const router = useRouter();
-  const [book, setBook] = useState<BookItem | null>(null);
+  const [book, setBook] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const bookId = params.id as string;
-    const booksFromStorage = localStorage.getItem("books");
+    const fetchBooks = async () => {
+      const db = await openDB(process.env.NEXT_PUBLIC_APP_DB!);
+      const booksFromStorage = await db.getAllKeys(
+        process.env.NEXT_PUBLIC_BOOKS_TABLE!
+      );
+      return booksFromStorage;
+    };
+    fetchBooks().then((booksFromStorage) => {
+      if (booksFromStorage) {
+        const foundBook = booksFromStorage.find((b) => b.toString() === bookId);
 
-    if (booksFromStorage) {
-      const books: BookItem[] = JSON.parse(booksFromStorage);
-      const foundBook = books.find((b) => b.id === bookId);
-
-      if (foundBook) {
-        setBook(foundBook);
+        if (foundBook) {
+          setBook(foundBook.toString());
+        } else {
+          router.push("/");
+        }
       } else {
-        // Book not found, redirect to home
         router.push("/");
       }
-    } else {
-      // No books in storage, redirect to home
-      router.push("/");
-    }
 
-    setLoading(false);
+      setLoading(false);
+    });
   }, [params.id, router]);
 
   if (loading) {
@@ -66,13 +71,13 @@ export default function ReadPage() {
           <ChevronLeft size={16} className="mr-2" />
           Back to Library
         </Button>
-        <div>
+        {/* <div>
           <h1 className="font-semibold">{book.title}</h1>
           <p className="text-sm text-muted-foreground">{book.author}</p>
-        </div>
+        </div> */}
       </div>
       <div className="flex-1 h-full w-full">
-        <Reader bookId={book.id} url={book.dataUrl} />
+        <Reader bookId={book} />
       </div>
     </div>
   );

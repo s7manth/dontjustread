@@ -8,11 +8,10 @@ const appDb = process.env.NEXT_PUBLIC_APP_DB!;
 const booksTable = process.env.NEXT_PUBLIC_BOOKS_TABLE!;
 
 interface ReaderProps {
-  url: string;
   bookId: string;
 }
 
-export function Reader({ url, bookId }: ReaderProps) {
+export function Reader({ bookId }: ReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [book, setBook] = useState<EPub | null>(null);
   const [rendition, setRendition] = useState<any>(null);
@@ -51,7 +50,7 @@ export function Reader({ url, bookId }: ReaderProps) {
 
         console.log("Book file retrieved:", file);
 
-        console.log("Creating new ePub instance");
+        console.log("Creating new ePub instance: ", file);
         const newBook = new EPub(file);
 
         console.log("Waiting for book to be ready");

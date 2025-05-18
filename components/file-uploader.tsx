@@ -15,15 +15,18 @@ import { Upload, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { openDB } from "idb";
+import { Book as EPub } from "epubjs";
 
 const appDb = process.env.NEXT_PUBLIC_APP_DB!;
 const booksTable = process.env.NEXT_PUBLIC_BOOKS_TABLE!;
+const booksMetadataTable = process.env.NEXT_PUBLIC_BOOKS_METADATA_TABLE!;
 
 const initDB = async () => {
   return openDB(appDb, 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(booksTable)) {
         db.createObjectStore(booksTable);
+        db.createObjectStore(booksMetadataTable);
       }
     },
   });
@@ -61,6 +64,7 @@ export function FileUploader({
     }
 
     const file = files[0];
+    // const newBook = new EPub(file);
 
     setIsUploading(true);
 
@@ -69,30 +73,13 @@ export function FileUploader({
 
       const db = await initDB();
       await db.put(booksTable, file, bookId);
-      db.close();
-
-      const blobUrl = URL.createObjectURL(file);
-
-      const existingBooksJSON = localStorage.getItem("books") || "[]";
-      const existingBooks = JSON.parse(existingBooksJSON);
-
-      const newBook = {
-        id: bookId,
-        title: title || file.name.replace(/\.epub$/, ""),
-        author: author || "Unknown",
-        cover: "",
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        tempBlobUrl: blobUrl,
-        addedAt: new Date().toISOString(),
-      };
 
       toast.success("Book uploaded successfully");
       setFiles([]);
       setTitle("");
       setAuthor("");
       onUploadComplete?.();
+      db.close();
     } catch (error) {
       toast.error("Failed to upload book");
       console.error("Error uploading book:", error);

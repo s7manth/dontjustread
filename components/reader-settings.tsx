@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,14 +28,14 @@ interface ReaderSettingsProps {
 
 export function ReaderSettings({ settings, onUpdate }: ReaderSettingsProps) {
   return (
-    <Sheet>
-      <SheetTrigger asChild>
+    <Dialog>
+      <DialogTrigger asChild>
         <Button variant="outline">Settings</Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Reading Settings</SheetTitle>
-        </SheetHeader>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reading Settings</DialogTitle>
+        </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label>Font Size</Label>
@@ -78,7 +78,7 @@ export function ReaderSettings({ settings, onUpdate }: ReaderSettingsProps) {
             </Select>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

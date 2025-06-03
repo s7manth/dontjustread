@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Book as EPub } from "epubjs";
 import { Button } from "@/components/ui/button";
 import { ReaderSettings } from "@/components/reader-settings";
-import { openDB } from "idb";
+import { useDB } from "@/context/db-context";
 
 const appDb = process.env.NEXT_PUBLIC_APP_DB!;
 const booksTable = process.env.NEXT_PUBLIC_BOOKS_TABLE!;
@@ -24,6 +24,8 @@ export function Reader({ bookId }: ReaderProps) {
     font: "inter",
   });
 
+  const { getBook } = useDB();
+
   useEffect(() => {
     const loadBook = async () => {
       if (!viewerRef.current) {
@@ -36,9 +38,7 @@ export function Reader({ bookId }: ReaderProps) {
 
       try {
         console.log("Fetching book from IndexedDB with ID:", bookId);
-
-        const db = await openDB(appDb);
-        const file = await db.get(booksTable, bookId);
+        const file = await getBook(Number(bookId));
 
         if (!file) {
           const errorMsg = "Book not found in IndexedDB";

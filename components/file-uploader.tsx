@@ -16,21 +16,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { openDB } from "idb";
 import { Book as EPub } from "epubjs";
-
-const appDb = process.env.NEXT_PUBLIC_APP_DB!;
-const booksTable = process.env.NEXT_PUBLIC_BOOKS_TABLE!;
-const booksMetadataTable = process.env.NEXT_PUBLIC_BOOKS_METADATA_TABLE!;
-
-const initDB = async () => {
-  return openDB(appDb, 1, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(booksTable)) {
-        db.createObjectStore(booksTable);
-        db.createObjectStore(booksMetadataTable);
-      }
-    },
-  });
-};
+import { useDB } from "@/context/db-context";
 
 export function FileUploader({
   onUploadComplete,
@@ -41,6 +27,7 @@ export function FileUploader({
   const [isUploading, setIsUploading] = React.useState(false);
   const [title, setTitle] = React.useState("");
   const [author, setAuthor] = React.useState("");
+  const { addBook } = useDB();
 
   const onFileReject = React.useCallback((file: File, message: string) => {
     toast(message, {
@@ -64,27 +51,50 @@ export function FileUploader({
     }
 
     const file = files[0];
-    // const newBook = new EPub(file);
 
-    setIsUploading(true);
-
+    const reader = new FileReader();
     try {
-      const bookId = Date.now().toString();
+      const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as ArrayBuffer);
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
 
-      const db = await initDB();
-      await db.put(booksTable, file, bookId);
+      const arr = new Uint8Array(buffer).subarray(0, 2);
+      const header = Array.from(arr)
+        .map((b) => b.toString(16))
+        .join("");
 
-      toast.success("Book uploaded successfully");
-      setFiles([]);
-      setTitle("");
-      setAuthor("");
-      onUploadComplete?.();
-      db.close();
+      if (header !== "504b") {
+        toast.error("Invalid file format", {
+          description: "Not a valid EPUB file",
+        });
+        return;
+      }
+
+      const newBook = new EPub(reader.result as string);
+      const bookMetadata = await newBook.loaded.metadata;
+      setTitle(bookMetadata.title);
+      setAuthor(bookMetadata.creator);
+      setIsUploading(true);
+
+      try {
+        const bookId = Date.now();
+
+        addBook(bookId, file);
+
+        toast.success("Book uploaded successfully");
+        setFiles([]);
+        onUploadComplete?.();
+      } catch (error) {
+        toast.error("Failed to upload book");
+        console.error("Error uploading book:", error);
+      } finally {
+        setIsUploading(false);
+      }
     } catch (error) {
-      toast.error("Failed to upload book");
-      console.error("Error uploading book:", error);
-    } finally {
-      setIsUploading(false);
+      toast.error("Failed to read file");
+      console.error("Error reading file:", error);
     }
   };
 

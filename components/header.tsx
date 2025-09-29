@@ -20,7 +20,7 @@ export function Header({
   const [open, setOpen] = React.useState(false);
 
   return (
-    <header className="w-full py-4 px-6 flex justify-between items-center border-b">
+    <header className="w-full py-4 px-6 flex justify-between items-center">
       <h1 className="text-xl font-bold">Don&apos;t Just Read</h1>
 
       <Dialog open={open} onOpenChange={setOpen}>

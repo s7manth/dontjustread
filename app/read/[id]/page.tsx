@@ -21,20 +21,48 @@ export default function ReadPage() {
   const router = useRouter();
   const [book, setBook] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { hasBook } = useDB();
+  const { hasBook, getReadingSettings, isLoading: dbLoading } = useDB();
+  const [headerStyle, setHeaderStyle] = useState<{ background: string; color: string }>({ background: "#ffffff", color: "#111111" });
+  const [initialSettings, setInitialSettings] = useState<{
+    fontSize: number;
+    lineHeight: number;
+    font: string;
+    background: string;
+    color: string;
+    presetId?: string;
+  } | null>(null);
 
   useEffect(() => {
+    if (dbLoading) return; // wait for DB to initialize
     const bookId = params.id as string;
     hasBook(Number(bookId))
       .then((exists) => {
         if (exists) {
           setBook(bookId);
+          getReadingSettings(Number(bookId))
+            .then((settings) => {
+              if (settings) {
+                setHeaderStyle({
+                  background: settings.background,
+                  color: settings.color,
+                });
+                setInitialSettings({
+                  fontSize: settings.fontSize,
+                  lineHeight: settings.lineHeight,
+                  font: settings.font,
+                  background: settings.background,
+                  color: settings.color,
+                  presetId: settings.presetId,
+                });
+              }
+            })
+            .catch(() => {});
         } else {
           router.push("/");
         }
       })
       .finally(() => setLoading(false));
-  }, [params.id, router, hasBook]);
+  }, [params.id, router, hasBook, getReadingSettings, dbLoading]);
 
   if (loading) {
     return (
@@ -50,11 +78,12 @@ export default function ReadPage() {
 
   return (
     <div className="h-screen w-screen flex flex-col">
-      <div className="bg-background border-b p-4 flex items-center">
+      <div className="p-4 flex items-center" style={{ background: headerStyle.background, color: headerStyle.color }}>
         <Button
           variant="ghost"
           onClick={() => router.push("/")}
           className="mr-4"
+          style={{ background: headerStyle.color, color: headerStyle.background }}
         >
           <ChevronLeft size={16} className="mr-2" />
           Back to Library
@@ -65,7 +94,11 @@ export default function ReadPage() {
         </div> */}
       </div>
       <div className="flex-1 h-full w-full">
-        <Reader bookId={book} />
+        <Reader
+          bookId={book}
+          initialSettings={initialSettings ?? undefined}
+          onSettingsChange={(s) => setHeaderStyle({ background: s.background, color: s.color })}
+        />
       </div>
     </div>
   );

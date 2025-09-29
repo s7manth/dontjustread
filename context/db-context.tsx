@@ -23,6 +23,14 @@ export interface BookMetadata {
   readingCfi?: string; // Last read position
   readingProgressPercent?: number; // 0-100
   finished?: boolean; // true when book is completed
+  readingSettings?: {
+    fontSize: number;
+    lineHeight: number;
+    font: string;
+    background: string;
+    color: string;
+    presetId?: string;
+  };
 }
 
 interface DBContextType {
@@ -43,6 +51,13 @@ interface DBContextType {
   ) => Promise<void>;
   getReadingProgress: (id: number) => Promise<string | undefined>;
   clearReadingProgress: (id: number) => Promise<void>;
+  setReadingSettings: (
+    id: number,
+    settings: NonNullable<BookMetadata["readingSettings"]>
+  ) => Promise<void>;
+  getReadingSettings: (
+    id: number
+  ) => Promise<BookMetadata["readingSettings"] | undefined>;
   isLoading: boolean;
 }
 
@@ -218,10 +233,58 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             ? Math.max(0, Math.min(100, Math.round(percent)))
             : existing?.readingProgressPercent,
         finished: typeof finished === "boolean" ? finished : existing?.finished,
+        readingSettings: existing?.readingSettings,
       };
       await dbImpl.put(METADATA_STORE_NAME, updated, id);
     } catch (error) {
       console.error("Error setting reading progress:", error);
+      throw error;
+    }
+  };
+
+  const setReadingSettings = async (
+    id: number,
+    settings: NonNullable<BookMetadata["readingSettings"]>
+  ) => {
+    if (!dbImpl) throw new Error("Database not initialized");
+    try {
+      const existing = (await dbImpl.get(
+        METADATA_STORE_NAME,
+        id
+      )) as BookMetadata | undefined;
+      const updated: BookMetadata = {
+        title: existing?.title || "Untitled",
+        creator: existing?.creator || "",
+        series: existing?.series,
+        seriesIndex: existing?.seriesIndex,
+        description: existing?.description,
+        language: existing?.language,
+        publisher: existing?.publisher,
+        rights: existing?.rights,
+        modified_date: existing?.modified_date,
+        coverBlob: existing?.coverBlob,
+        readingCfi: existing?.readingCfi,
+        readingProgressPercent: existing?.readingProgressPercent,
+        finished: existing?.finished,
+        readingSettings: settings,
+      };
+      await dbImpl.put(METADATA_STORE_NAME, updated, id);
+    } catch (error) {
+      console.error("Error setting reading settings:", error);
+      throw error;
+    }
+  };
+
+  const getReadingSettings = async (id: number) => {
+    if (!dbImpl) throw new Error("Database not initialized");
+    try {
+      const existing = (await dbImpl.get(
+        METADATA_STORE_NAME,
+        id
+      )) as BookMetadata | undefined;
+      return existing?.readingSettings ?? undefined;
+    } catch (error) {
+      console.error("Error getting reading settings:", error);
       throw error;
     }
   };
@@ -258,7 +321,7 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <DBContext.Provider
-      value={{ addBook, addBookMetadata, getBookMetadata, getAllBookMetadata, getBook, getAllBooks, getAllBookKeys, hasBook, deleteBook, setReadingProgress, getReadingProgress, clearReadingProgress, isLoading }}
+      value={{ addBook, addBookMetadata, getBookMetadata, getAllBookMetadata, getBook, getAllBooks, getAllBookKeys, hasBook, deleteBook, setReadingProgress, getReadingProgress, clearReadingProgress, setReadingSettings, getReadingSettings, isLoading }}
     >
       {children}
     </DBContext.Provider>

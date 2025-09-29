@@ -6,22 +6,43 @@ import { useDB } from "@/context/db-context";
 
 interface ReaderProps {
   bookId: string;
+  initialSettings?: {
+    fontSize: number;
+    lineHeight: number;
+    theme?: string;
+    font: string;
+    background: string;
+    color: string;
+    presetId?: string;
+  };
+  onSettingsChange?: (settings: {
+    fontSize: number;
+    lineHeight: number;
+    theme?: string;
+    font: string;
+    background: string;
+    color: string;
+    presetId?: string;
+  }) => void;
 }
 
-export function Reader({ bookId }: ReaderProps) {
+export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [book, setBook] = useState<EPub | null>(null);
   const [rendition, setRendition] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [settings, setSettings] = useState({
-    fontSize: 16,
-    lineHeight: 1.5,
-    theme: "light",
-    font: "inter",
-  });
+  const [settings, setSettings] = useState(() => ({
+    fontSize: initialSettings?.fontSize ?? 16,
+    lineHeight: initialSettings?.lineHeight ?? 1.6,
+    theme: initialSettings?.theme ?? "light",
+    font: initialSettings?.font ?? "Inter",
+    background: initialSettings?.background ?? "#ffffff",
+    color: initialSettings?.color ?? "#111111",
+    presetId: initialSettings?.presetId ?? "default",
+  }));
 
-  const { getBook, getReadingProgress, setReadingProgress } = useDB();
+  const { getBook, getReadingProgress, setReadingProgress, getReadingSettings, setReadingSettings } = useDB();
 
   useEffect(() => {
     const loadBook = async () => {
@@ -109,6 +130,63 @@ export function Reader({ bookId }: ReaderProps) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setRendition(newRendition);
 
+        // Inject Google Fonts into each EPUB iframe so fonts render even if not installed locally
+        const googleFontHrefs: string[] = [
+          "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap",
+          "https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap",
+          "https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap",
+        ];
+        const injectFonts = (contents: any) => {
+          try {
+            googleFontHrefs.forEach((href) => {
+              const doc: Document | undefined = contents?.document;
+              if (!doc) return;
+              const existing = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).some(
+                (el) => el.getAttribute("href") === href
+              );
+              if (existing) return;
+              const link = doc.createElement("link");
+              link.setAttribute("rel", "stylesheet");
+              link.setAttribute("href", href);
+              doc.head.appendChild(link);
+            });
+          } catch {}
+        };
+        try {
+          // Register for future sections
+          (newRendition as any).hooks?.content?.register?.(injectFonts);
+          // Apply to already rendered contents
+          (newRendition as any).getContents?.().forEach(injectFonts);
+        } catch {}
+
+        // Load saved reading settings and apply before display
+        try {
+          const savedSettings = await getReadingSettings(Number(bookId));
+          if (savedSettings) {
+            setSettings((prev) => ({ ...prev, ...savedSettings }));
+            newRendition.themes.fontSize(`${savedSettings.fontSize}px`);
+            newRendition.themes.default({
+              body: {
+                "font-family": savedSettings.font,
+                "line-height": savedSettings.lineHeight,
+                background: savedSettings.background,
+                color: savedSettings.color || "#111111",
+              },
+            });
+          } else {
+            // Apply defaults when no saved settings exist
+            newRendition.themes.fontSize(`${settings.fontSize}px`);
+            newRendition.themes.default({
+              body: {
+                "font-family": settings.font,
+                "line-height": settings.lineHeight,
+                background: settings.background,
+                color: settings.color || "#111111",
+              },
+            });
+          }
+        } catch {}
+
         // Try to restore last reading position first; otherwise start near content
         let displayed = false;
         try {
@@ -134,14 +212,7 @@ export function Reader({ bookId }: ReaderProps) {
           await newRendition.display(spine[startPosition]?.href || 0);
         }
 
-        console.log("Applying settings");
-        newRendition.themes.fontSize(`${settings.fontSize}px`);
-        newRendition.themes.default({
-          body: {
-            "font-family": settings.font,
-            "line-height": settings.lineHeight,
-          },
-        });
+        // Settings are already applied above based on saved/default values
 
         // Save progress on each relocation
         try {
@@ -192,10 +263,39 @@ export function Reader({ bookId }: ReaderProps) {
 
   const updateSettings = (newSettings: typeof settings) => {
     setSettings(newSettings);
+    try {
+      onSettingsChange?.({
+        fontSize: newSettings.fontSize,
+        lineHeight: newSettings.lineHeight,
+        theme: newSettings.theme,
+        font: newSettings.font,
+        background: newSettings.background,
+        color: newSettings.color,
+        presetId: newSettings.presetId,
+      });
+    } catch {}
     if (!rendition) return;
 
     rendition.themes.fontSize(`${newSettings.fontSize}px`);
-    rendition.themes.font(newSettings.font);
+    rendition.themes.default({
+      body: {
+        "font-family": newSettings.font,
+        "line-height": newSettings.lineHeight,
+        background: newSettings.background,
+        color: newSettings.color,
+      },
+    });
+
+    try {
+      setReadingSettings(Number(bookId), {
+        fontSize: newSettings.fontSize,
+        lineHeight: newSettings.lineHeight,
+        font: newSettings.font,
+        background: newSettings.background,
+        color: newSettings.color,
+        presetId: newSettings.presetId,
+      });
+    } catch {}
   };
 
   const handlePrevious = () => {
@@ -245,21 +345,12 @@ export function Reader({ bookId }: ReaderProps) {
     if (viewerRef.current) {
       viewerRef.current.style.transition = "opacity 0.1s ease-in-out";
     }
-  }, []);
+  }, [settings]);
 
   return (
-    <div className="flex flex-col h-full w-full">
-      <div className="flex justify-between p-4 border-b">
-        <Button onClick={handlePrevious}>Previous</Button>
-        <ReaderSettings settings={settings} onUpdate={updateSettings} />
-        <Button onClick={handleNext}>Next</Button>
-      </div>
-
-      {/* Add a background color that matches your theme to reduce the flash effect */}
-      <div className="flex-1 relative bg-background">
-        <div className="flex flex-col">
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+      <div className="flex flex-col h-full w-full">
+        {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
             </div>
           )}
@@ -271,10 +362,50 @@ export function Reader({ bookId }: ReaderProps) {
               </div>
             </div>
           )}
-        </div>
 
+      <div className="flex-1 relative" style={{ background: settings.background }}>
         <div ref={viewerRef} className="h-full w-full" />
       </div>
+      <div
+          className="flex justify-between p-4"
+          style={{
+            background: settings.background,
+            color: settings.color,
+            borderColor: settings.color,
+          }}
+        >
+          <Button
+            onClick={handlePrevious}
+            style={{
+              background: settings.color,
+              color: settings.background,
+              borderColor: settings.color,
+            }}
+            variant="outline"
+          >
+            Previous
+          </Button>
+          <ReaderSettings
+            settings={settings}
+            onUpdate={updateSettings}
+            triggerStyle={{
+              background: settings.color,
+              color: settings.background,
+              borderColor: settings.color,
+            }}
+          />
+          <Button
+            onClick={handleNext}
+            style={{
+              background: settings.color,
+              color: settings.background,
+              borderColor: settings.color,
+            }}
+            variant="outline"
+          >
+            Next
+          </Button>
+        </div>
     </div>
   );
 }

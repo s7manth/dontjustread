@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Command, ArrowUp, ArrowDown } from "lucide-react";
+import { Command, ArrowUp, ArrowDown, Check } from "lucide-react";
 
 interface ReaderSettingsProps {
   settings: {
@@ -51,6 +51,17 @@ export function ReaderSettings({ settings, onUpdate, triggerStyle, open, onOpenC
       setIsMac(/Mac|iPhone|iPad|iPod/i.test(platform));
     } catch {}
   }, []);
+  const computedPresetId = (() => {
+    if (settings.presetId) return settings.presetId;
+    const match = PRESETS.find((p) =>
+      p.font === settings.font &&
+      p.fontSize === settings.fontSize &&
+      Math.abs(p.lineHeight - settings.lineHeight) < 0.01 &&
+      p.background === settings.background &&
+      p.color === settings.color
+    );
+    return match?.id;
+  })();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -80,26 +91,33 @@ export function ReaderSettings({ settings, onUpdate, triggerStyle, open, onOpenC
           <div className="space-y-2">
             <Label>Presets</Label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {PRESETS.map((p) => (
-                <Button
-                  key={p.id}
-                  variant={settings.presetId === p.id ? "default" : "outline"}
-                  onClick={() =>
-                    onUpdate({
-                      ...settings,
-                      font: p.font,
-                      fontSize: p.fontSize,
-                      lineHeight: p.lineHeight,
-                      background: p.background,
-                      color: p.color,
-                      presetId: p.id,
-                    })
-                  }
-                  style={{ background: p.color, color: p.background, fontFamily: p.font }}
-                >
-                  {p.name}
-                </Button>
-              ))}
+              {PRESETS.map((p) => {
+                const selected = computedPresetId === p.id;
+                return (
+                  <Button
+                    key={p.id}
+                    aria-current={selected ? "true" : undefined}
+                    variant={selected ? "default" : "outline"}
+                    onClick={() =>
+                      onUpdate({
+                        ...settings,
+                        font: p.font,
+                        fontSize: p.fontSize,
+                        lineHeight: p.lineHeight,
+                        background: p.background,
+                        color: p.color,
+                        presetId: p.id,
+                      })
+                    }
+                    style={{ background: p.color, color: p.background, fontFamily: p.font }}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      {selected && <Check className="h-4 w-4" />}
+                      <span>{p.name}</span>
+                    </span>
+                  </Button>
+                );
+              })}
             </div>
           </div>
           <div className="flex flex-row justify-around items-center">

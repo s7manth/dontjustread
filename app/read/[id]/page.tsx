@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Reader } from "@/components/reader";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
-import { openDB } from "idb";
+import { useDB } from "@/context/db-context";
 
 interface BookItem {
   id: string;
@@ -21,32 +21,20 @@ export default function ReadPage() {
   const router = useRouter();
   const [book, setBook] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { hasBook } = useDB();
 
   useEffect(() => {
     const bookId = params.id as string;
-    const fetchBooks = async () => {
-      const db = await openDB(process.env.NEXT_PUBLIC_APP_DB!);
-      const booksFromStorage = await db.getAllKeys(
-        process.env.NEXT_PUBLIC_BOOKS_TABLE!
-      );
-      return booksFromStorage;
-    };
-    fetchBooks().then((booksFromStorage) => {
-      if (booksFromStorage) {
-        const foundBook = booksFromStorage.find((b) => b.toString() === bookId);
-
-        if (foundBook) {
-          setBook(foundBook.toString());
+    hasBook(Number(bookId))
+      .then((exists) => {
+        if (exists) {
+          setBook(bookId);
         } else {
           router.push("/");
         }
-      } else {
-        router.push("/");
-      }
-
-      setLoading(false);
-    });
-  }, [params.id, router]);
+      })
+      .finally(() => setLoading(false));
+  }, [params.id, router, hasBook]);
 
   if (loading) {
     return (

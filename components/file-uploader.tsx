@@ -14,8 +14,8 @@ import {
 import { Upload, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { openDB } from "idb";
 import { Book as EPub } from "epubjs";
+import type { BookMetadata } from "@/context/db-context";
 import { useDB } from "@/context/db-context";
 
 export function FileUploader({
@@ -27,7 +27,7 @@ export function FileUploader({
   const [isUploading, setIsUploading] = React.useState(false);
   const [title, setTitle] = React.useState("");
   const [author, setAuthor] = React.useState("");
-  const { addBook } = useDB();
+  const { addBook, addBookMetadata } = useDB();
 
   const onFileReject = React.useCallback((file: File, message: string) => {
     toast(message, {
@@ -73,16 +73,54 @@ export function FileUploader({
       }
 
       const newBook = new EPub(reader.result as string);
-      const bookMetadata = await newBook.loaded.metadata;
-      setTitle(bookMetadata.title);
-      setAuthor(bookMetadata.creator);
+      const rawMetadata = await newBook.loaded.metadata;
+      const normalizedMetadata: BookMetadata = {
+        title: (rawMetadata?.title || "").toString().trim(),
+        creator: (rawMetadata?.creator || "").toString().trim(),
+        series: (rawMetadata as any)?.series ? (rawMetadata as any).series.toString().trim() : "",
+        seriesIndex:
+          (rawMetadata as any)?.seriesIndex !== undefined && (rawMetadata as any)?.seriesIndex !== null
+            ? String((rawMetadata as any).seriesIndex).toString().trim()
+            : "",
+        description: (rawMetadata as any)?.description || "",
+        language: (rawMetadata as any)?.language || "",
+        publisher: (rawMetadata as any)?.publisher || "",
+        rights: (rawMetadata as any)?.rights || "",
+        modified_date: (rawMetadata as any)?.modified_date || (rawMetadata as any)?.modified || "",
+        coverBlob: undefined,
+      };
+
+      // Attempt to fetch cover from book state
+      try {
+        // epubjs exposes cover via book.archive.createUrl(book.cover) or via resources
+        // When using the constructor with ArrayBuffer, newBook.cover may be an href
+        const coverHref = (newBook as any)?.cover || (newBook as any)?.packaging?.metadata?.cover;
+        if (coverHref) {
+          const coverBlob: Blob | undefined = await (newBook as any).archive
+            .createUrl(coverHref)
+            .then(async (url: string) => {
+              const resp = await fetch(url);
+              if (!resp.ok) return undefined;
+              return await resp.blob();
+            })
+            .catch(() => undefined);
+          if (coverBlob) {
+            normalizedMetadata.coverBlob = coverBlob;
+          }
+        }
+      } catch (e) {
+        console.warn("Unable to resolve cover:", e);
+      }
+
+      setTitle(normalizedMetadata.title);
+      setAuthor(normalizedMetadata.creator);
       setIsUploading(true);
 
       try {
         const bookId = Date.now();
 
-        addBook(bookId, file);
-
+        await addBook(bookId, file);
+        await addBookMetadata(bookId, normalizedMetadata);
         toast.success("Book uploaded successfully");
         setFiles([]);
         onUploadComplete?.();

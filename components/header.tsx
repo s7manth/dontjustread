@@ -12,7 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { FileUploader } from "@/components/file-uploader";
 
-export function Header() {
+export function Header({
+  onUploadComplete,
+}: {
+  onUploadComplete?: () => void;
+}) {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -30,7 +34,12 @@ export function Header() {
           <DialogHeader>
             <DialogTitle>Upload a book</DialogTitle>
           </DialogHeader>
-          <FileUploader onUploadComplete={() => setOpen(false)} />
+          <FileUploader
+            onUploadComplete={() => {
+              setOpen(false);
+              onUploadComplete?.();
+            }}
+          />
         </DialogContent>
       </Dialog>
     </header>

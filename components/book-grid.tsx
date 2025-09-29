@@ -9,63 +9,70 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { Book } from "lucide-react";
-import { openDB } from "idb";
+import { Book, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useDB } from "@/context/db-context";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 
-interface BookItem {
-  id: string;
+interface BookListItem {
   title: string;
   author: string;
-  cover: string;
-  dataUrl: string;
-  addedAt: string;
+  coverUrl?: string;
 }
 
-const appDb = process.env.NEXT_PUBLIC_APP_DB!;
-const booksTable = process.env.NEXT_PUBLIC_BOOKS_TABLE!;
-
 export function BookGrid() {
-  const [books, setBooks] = useState<BookItem[]>([]);
+  const [books, setBooks] = useState<BookListItem[]>([]);
   const [bookKeys, setBookKeys] = useState<IDBValidKey[]>([]);
-
-  async function checkDatabaseExists(dbName: string) {
-    try {
-      const db = await openDB(dbName);
-      db.close();
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
+  const { getAllBooks, getAllBookKeys, getAllBookMetadata, deleteBook, isLoading } = useDB();
 
   const loadBooks = async () => {
-    if (!(await checkDatabaseExists(appDb))) {
-      return;
-    }
-
-    const db = await openDB(appDb);
-
-    if (!db.objectStoreNames.contains(booksTable)) {
-      return;
-    }
-
-    const bookKeys = await db.getAllKeys(booksTable);
+    const bookKeys = await getAllBookKeys();
     if (!bookKeys || bookKeys.length === 0) {
       setBooks([]);
       return;
     }
+    const books = await getAllBooks();
+    const metadata = await getAllBookMetadata();
+    console.log("Books:", books);
+    console.log("Metadata:", metadata);
 
-    const books = await db.getAll(booksTable);
+    const listItems: BookListItem[] = bookKeys.map((_, idx) => {
+      const m = metadata[idx] || {};
+      let coverUrl: string | undefined;
+      try {
+        if (m?.coverBlob) {
+          coverUrl = URL.createObjectURL(m.coverBlob as Blob);
+        }
+      } catch {}
+      return {
+        title: (m?.title || "Untitled").toString(),
+        author: (m?.creator || "").toString(),
+        coverUrl,
+      };
+    });
 
-    setBooks(books);
+    setBooks(listItems);
     setBookKeys(bookKeys);
+  };
 
-    db.close();
+  const handleDelete = async (key: IDBValidKey) => {
+    await deleteBook(Number(key));
+    await loadBooks();
   };
 
   useEffect(() => {
-    loadBooks();
-  }, []);
+    if (!isLoading) {
+      loadBooks();
+    }
+  }, [isLoading]);
 
   return (
     <div className="space-y-6">
@@ -86,16 +93,16 @@ export function BookGrid() {
               return { key: bookKey, book: books[i] };
             })
             .map(({ key, book }) => (
-              <Link href={`/read/${key}`} key={key.toString()}>
-                <Card className="h-full hover:shadow-lg transition-shadow">
+              <Card key={key.toString()} className="h-full hover:shadow-lg transition-shadow">
+                <Link href={`/read/${key}`}>
                   <CardHeader className="pb-2">
                     <CardTitle className="line-clamp-2">{book.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="aspect-[2/3] bg-muted rounded-md flex items-center justify-center">
-                      {book.cover ? (
+                      {book.coverUrl ? (
                         <img
-                          src={book.cover}
+                          src={book.coverUrl}
                           alt={book.title}
                           className="w-full h-full object-cover rounded-md"
                         />
@@ -104,13 +111,36 @@ export function BookGrid() {
                       )}
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    <p className="text-sm text-muted-foreground">
-                      {book.author}
-                    </p>
-                  </CardFooter>
-                </Card>
-              </Link>
+                </Link>
+                <CardFooter className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">{book.author}</p>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon" aria-label="Delete book">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Delete this book?</DialogTitle>
+                      </DialogHeader>
+                      <p className="text-sm text-muted-foreground">
+                        This will remove the book from your library and delete it from the database.
+                      </p>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <DialogClose asChild>
+                          <Button variant="destructive" onClick={() => handleDelete(key)}>
+                            Delete
+                          </Button>
+                        </DialogClose>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </CardFooter>
+              </Card>
             ))}
         </div>
       )}

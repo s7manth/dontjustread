@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { ReaderSettings } from "@/components/reader-settings";
 import { useDB } from "@/context/db-context";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ReaderProps {
   bookId: string;
@@ -34,6 +35,19 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectionPopup, setSelectionPopup] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    text: string;
+  }>({ visible: false, x: 0, y: 0, text: "" });
+  const [resultModal, setResultModal] = useState<{
+    open: boolean;
+    title: string;
+    loading: boolean;
+    error?: string | null;
+    content?: string | null;
+  }>({ open: false, title: "", loading: false, error: null, content: null });
   const [settings, setSettings] = useState(() => ({
     fontSize: initialSettings?.fontSize ?? 16,
     lineHeight: initialSettings?.lineHeight ?? 1.6,
@@ -186,6 +200,44 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
 
         // Settings are already applied above based on saved/default values
 
+        // Selection handling to show contextual popup
+        try {
+          newRendition.on("selected", async (cfiRange: string, contents: any) => {
+            try {
+              const sel = contents?.window?.getSelection?.();
+              const selectedText = sel?.toString()?.trim() || "";
+              if (!selectedText) {
+                setSelectionPopup((prev) => ({ ...prev, visible: false }));
+                return;
+              }
+              let rect: DOMRect | null = null;
+              try {
+                rect = sel?.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : null;
+              } catch {}
+              const iframeEl = contents?.document?.defaultView?.frameElement as HTMLIFrameElement | null;
+              const iframeRect = iframeEl ? iframeEl.getBoundingClientRect() : { left: 0, top: 0 } as any;
+              const margin = 8;
+              let x = (rect?.right || 0) + (iframeRect?.left || 0) + margin; // to the right of selection
+              let y = (rect?.top || 0) + (iframeRect?.top || 0); // align with top of selection
+              try {
+                const vw = window.innerWidth || 0;
+                const vh = window.innerHeight || 0;
+                // basic clamping to keep popup in viewport
+                x = Math.min(Math.max(0, x), Math.max(0, vw - 220));
+                y = Math.min(Math.max(0, y), Math.max(0, vh - 120));
+              } catch {}
+              setSelectionPopup({ visible: true, x, y, text: selectedText });
+            } catch {
+              setSelectionPopup((prev) => ({ ...prev, visible: false }));
+            }
+          });
+
+          // Hide popup when clicking elsewhere
+          newRendition.on("click", () => {
+            setSelectionPopup((prev) => ({ ...prev, visible: false }));
+          });
+        } catch {}
+
         // Save progress on each relocation
         try {
           newRendition.on("relocated", async (location: any) => {
@@ -312,6 +364,48 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
     }
   };
 
+  const openResultModal = (title: string) => {
+    setResultModal({ open: true, title, loading: true, error: null, content: null });
+  };
+
+  const closeResultModal = () => {
+    setResultModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleDictionary = async () => {
+    const word = (selectionPopup.text || "").split(/\s+/)[0]?.replace(/[^a-zA-Z'-]/g, "").toLowerCase();
+    if (!word) return;
+    openResultModal("Dictionary");
+    try {
+      const res = await fetch(`/api/dictionary?word=${encodeURIComponent(word)}`, { method: "GET" });
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      const data = await res.json();
+      const text: string = data?.text || JSON.stringify(data, null, 2);
+      setResultModal((prev) => ({ ...prev, loading: false, content: text }));
+    } catch (e: any) {
+      setResultModal((prev) => ({ ...prev, loading: false, error: e?.message || "Failed to fetch" }));
+    }
+  };
+
+  const handleContextual = async () => {
+    const passage = selectionPopup.text?.trim();
+    if (!passage) return;
+    openResultModal("Contextual Meaning");
+    try {
+      const res = await fetch(`/api/contextual`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passage }),
+      });
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      const data = await res.json();
+      const text: string = data?.text || JSON.stringify(data, null, 2);
+      setResultModal((prev) => ({ ...prev, loading: false, content: text }));
+    } catch (e: any) {
+      setResultModal((prev) => ({ ...prev, loading: false, error: e?.message || "Failed to fetch" }));
+    }
+  };
+
   // Keyboard handling for navigation and settings
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -370,6 +464,35 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
 
       <div className="flex-1 relative" style={{ background: settings.background }}>
         <div ref={viewerRef} className="h-full w-full" />
+
+        {selectionPopup.visible && (
+          <div
+            className="fixed z-50 rounded-md border bg-background shadow-md text-sm"
+            style={{ left: selectionPopup.x, top: selectionPopup.y }}
+          >
+            <div className="flex items-center">
+              <button
+                className="px-3 py-2 hover:bg-accent"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDictionary();
+                }}
+              >
+                Dictionary
+              </button>
+              <div className="h-5 w-px bg-border" />
+              <button
+                className="px-3 py-2 hover:bg-accent"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleContextual();
+                }}
+              >
+                Contextual Meaning (AI)
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div
           className="flex justify-between p-4"
@@ -415,6 +538,23 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
             <ArrowRight size={16} className="ml-2" />
           </Button>
         </div>
+
+        <Dialog open={resultModal.open} onOpenChange={(open) => (open ? setResultModal((p) => ({ ...p, open })) : closeResultModal())}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{resultModal.title}</DialogTitle>
+            </DialogHeader>
+            <div className="whitespace-pre-wrap text-sm max-h-[50vh] overflow-auto">
+              {resultModal.loading && <div>Loading...</div>}
+              {!resultModal.loading && resultModal.error && (
+                <div className="text-destructive">{resultModal.error}</div>
+              )}
+              {!resultModal.loading && !resultModal.error && (
+                <div>{resultModal.content}</div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }

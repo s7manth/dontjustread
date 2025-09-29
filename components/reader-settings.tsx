@@ -7,9 +7,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { Command } from "lucide-react";
+import { Command, ArrowUp, ArrowDown } from "lucide-react";
 
 interface ReaderSettingsProps {
   settings: {
@@ -73,7 +72,7 @@ export function ReaderSettings({ settings, onUpdate, triggerStyle, open, onOpenC
           </span>
         </Button>
       </DialogTrigger>
-      <DialogContent style={{ ...triggerStyle, background: settings.color, color: settings.background, fontFamily: settings.font }}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Reading Settings</DialogTitle>
         </DialogHeader>
@@ -103,64 +102,76 @@ export function ReaderSettings({ settings, onUpdate, triggerStyle, open, onOpenC
               ))}
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="flex flex-row justify-around items-center">
+          <div className="flex flex-col space-y-2 items-center">
             <Label>Font Size</Label>
-            <Slider
-              value={[settings.fontSize]}
-              min={12}
-              max={24}
-              step={1}
-              onValueChange={([value]) =>
-                onUpdate({ ...settings, fontSize: value })
-              }
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                aria-label="Decrease font size"
+                onClick={() =>
+                  onUpdate({
+                    ...settings,
+                    fontSize: Math.max(12, settings.fontSize - 1),
+                    presetId: undefined,
+                  })
+                }
+              >
+                <span className="text-sm leading-none">A</span>
+              </Button>
+              <div className="min-w-[3.5rem] text-center text-sm tabular-nums">
+                {settings.fontSize}px
+              </div>
+              <Button
+                variant="outline"
+                aria-label="Increase font size"
+                onClick={() =>
+                  onUpdate({
+                    ...settings,
+                    fontSize: Math.min(24, settings.fontSize + 1),
+                    presetId: undefined,
+                  })
+                }
+              >
+                <span className="text-xl leading-none">A</span>
+              </Button>
+            </div>
           </div>
-          <div className="space-y-2">
+          <div className="flex flex-col space-y-2 items-center">
             <Label>Line Height</Label>
-            <Slider
-              value={[settings.lineHeight * 10]}
-              min={10}
-              max={20}
-              step={1}
-              onValueChange={([value]) =>
-                onUpdate({ ...settings, lineHeight: value / 10 })
-              }
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                aria-label="Decrease line height"
+                onClick={() =>
+                  onUpdate({
+                    ...settings,
+                    lineHeight: Math.max(1.0, parseFloat((settings.lineHeight - 0.1).toFixed(2))),
+                    presetId: undefined,
+                  })
+                }
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+              <div className="min-w-[3.5rem] text-center text-sm tabular-nums">
+                {settings.lineHeight.toFixed(1)}
+              </div>
+              <Button
+                variant="outline"
+                aria-label="Increase line height"
+                onClick={() =>
+                  onUpdate({
+                    ...settings,
+                    lineHeight: Math.min(2.0, parseFloat((settings.lineHeight + 0.1).toFixed(2))),
+                    presetId: undefined,
+                  })
+                }
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          {/* <div className="space-y-2">
-            <Label>Font Family</Label>
-            <Select
-              value={settings.font}
-              onValueChange={(value) => onUpdate({ ...settings, font: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Inter">Inter</SelectItem>
-                <SelectItem value="Georgia">Georgia</SelectItem>
-                <SelectItem value="Charter">Charter</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
-          <div className="space-y-2">
-            <Label>Background</Label>
-            <input
-              type="color"
-              value={settings.background || "#ffffff"}
-              onChange={(e) => onUpdate({ ...settings, background: e.target.value })}
-              className="h-9 w-full rounded-md border px-2 py-1"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Text Color</Label>
-            <input
-              type="color"
-              value={settings.color || "#111111"}
-              onChange={(e) => onUpdate({ ...settings, color: e.target.value })}
-              className="h-9 w-full rounded-md border px-2 py-1"
-            />
-          </div> */}
         </div>
       </DialogContent>
     </Dialog>

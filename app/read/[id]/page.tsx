@@ -7,22 +7,15 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { useDB } from "@/context/db-context";
 
-interface BookItem {
-  id: string;
-  title: string;
-  author: string;
-  cover: string;
-  dataUrl: string;
-  addedAt: string;
-}
-
 export default function ReadPage() {
   const params = useParams();
   const router = useRouter();
   const [book, setBook] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { hasBook, getReadingSettings, isLoading: dbLoading } = useDB();
+  const { hasBook, getReadingSettings, getBookMetadata, isLoading: dbLoading } = useDB();
   const [headerStyle, setHeaderStyle] = useState<{ background: string; color: string }>({ background: "#ffffff", color: "#111111" });
+  const [title, setTitle] = useState<string>("");
+  const [author, setAuthor] = useState<string>("");
   const [initialSettings, setInitialSettings] = useState<{
     fontSize: number;
     lineHeight: number;
@@ -57,12 +50,21 @@ export default function ReadPage() {
               }
             })
             .catch(() => {});
+          // Fetch and set book metadata (title and author)
+          getBookMetadata(Number(bookId))
+            .then((metadata) => {
+              if (metadata) {
+                setTitle(metadata.title || "Untitled");
+                setAuthor(metadata.creator || "");
+              }
+            })
+            .catch(() => {});
         } else {
           router.push("/");
         }
       })
       .finally(() => setLoading(false));
-  }, [params.id, router, hasBook, getReadingSettings, dbLoading]);
+  }, [params.id, router, hasBook, getReadingSettings, getBookMetadata, dbLoading]);
 
   if (loading) {
     return (
@@ -88,10 +90,10 @@ export default function ReadPage() {
           <ChevronLeft size={16} className="mr-2" />
           Back to Library
         </Button>
-        {/* <div>
-          <h1 className="font-semibold">{book.title}</h1>
-          <p className="text-sm text-muted-foreground">{book.author}</p>
-        </div> */}
+        <div>
+          <h1 className="font-semibold">{title}</h1>
+          <p className="text-sm text-muted-foreground">{author}</p>
+        </div>
       </div>
       <div className="flex-1 h-full w-full">
         <Reader

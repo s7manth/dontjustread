@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { Book, Trash2 } from "lucide-react";
+import { Book, Trash2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDB } from "@/context/db-context";
 import {
@@ -26,6 +26,8 @@ interface BookListItem {
   title: string;
   author: string;
   coverUrl?: string;
+  progressPercent?: number;
+  finished?: boolean;
 }
 
 export function BookGrid() {
@@ -56,6 +58,8 @@ export function BookGrid() {
         title: (m?.title || "Untitled").toString(),
         author: (m?.creator || "").toString(),
         coverUrl,
+        progressPercent: typeof m?.readingProgressPercent === "number" ? m.readingProgressPercent : undefined,
+        finished: Boolean(m?.finished),
       };
     });
 
@@ -113,7 +117,19 @@ export function BookGrid() {
                   </CardContent>
                 </Link>
                 <CardFooter className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">{book.author}</p>
+                  <div className="flex flex-col">
+                    <p className="text-sm text-muted-foreground">{book.author}</p>
+                    {book.finished ? (
+                      <div className="flex items-center text-green-600 text-xs mt-1">
+                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        Finished
+                      </div>
+                    ) : typeof book.progressPercent === "number" ? (
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {book.progressPercent}%
+                      </span>
+                    ) : null}
+                  </div>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="ghost" size="icon" aria-label="Delete book">

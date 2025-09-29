@@ -4,9 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ReaderSettings } from "@/components/reader-settings";
 import { useDB } from "@/context/db-context";
 
-const appDb = process.env.NEXT_PUBLIC_APP_DB!;
-const booksTable = process.env.NEXT_PUBLIC_BOOKS_TABLE!;
-
 interface ReaderProps {
   bookId: string;
 }
@@ -24,7 +21,7 @@ export function Reader({ bookId }: ReaderProps) {
     font: "inter",
   });
 
-  const { getBook } = useDB();
+  const { getBook, getReadingProgress, setReadingProgress } = useDB();
 
   useEffect(() => {
     const loadBook = async () => {
@@ -78,6 +75,16 @@ export function Reader({ bookId }: ReaderProps) {
             });
         });
 
+        // Generate locations once to enable percentage computation
+        try {
+          if (!newBook.locations || newBook.locations.length() === 0) {
+            console.log("Generating locations for percentage calculation");
+            await newBook.locations.generate(1000);
+          }
+        } catch (e) {
+          console.warn("Failed to generate locations; percentage may be unavailable", e);
+        }
+
         setBook(newBook);
 
         if (!viewerRef.current) {
@@ -102,19 +109,30 @@ export function Reader({ bookId }: ReaderProps) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setRendition(newRendition);
 
-        // Get the spine items (chapters) and display the first content chapter instead of cover
-        const spine = newBook.spine.hooks.content.list();
-        console.log("Book spine items:", spine.length);
+        // Try to restore last reading position first; otherwise start near content
+        let displayed = false;
+        try {
+          const savedCfi = await getReadingProgress(Number(bookId));
+          if (savedCfi) {
+            console.log("Restoring saved location CFI", savedCfi);
+            await newRendition.display(savedCfi);
+            displayed = true;
+          }
+        } catch (e) {
+          console.warn("No saved reading progress or failed to load:", e);
+        }
 
-        // Find the first content chapter (usually after cover, title page, etc.)
-        // Usually the first real content is a few items in
-        const startPosition = 1; // Skip cover page (index 0)
-
-        console.log(
-          "Displaying content starting from spine position:",
-          startPosition
-        );
-        await newRendition.display(spine[startPosition]?.href || 0);
+        if (!displayed) {
+          // Get the spine items (chapters) and display the first content chapter instead of cover
+          const spine = newBook.spine.hooks.content.list();
+          console.log("Book spine items:", spine.length);
+          const startPosition = 1; // Skip cover page (index 0)
+          console.log(
+            "Displaying content starting from spine position:",
+            startPosition
+          );
+          await newRendition.display(spine[startPosition]?.href || 0);
+        }
 
         console.log("Applying settings");
         newRendition.themes.fontSize(`${settings.fontSize}px`);
@@ -124,6 +142,30 @@ export function Reader({ bookId }: ReaderProps) {
             "line-height": settings.lineHeight,
           },
         });
+
+        // Save progress on each relocation
+        try {
+          newRendition.on("relocated", async (location: any) => {
+            try {
+              const cfi = location?.start?.cfi || location?.end?.cfi;
+              let percent: number | undefined = undefined;
+              try {
+                if (cfi && newBook.locations) {
+                  const p = newBook.locations.percentageFromCfi(cfi);
+                  if (typeof p === "number" && !Number.isNaN(p)) {
+                    percent = Math.min(100, Math.max(0, Math.round(p * 100)));
+                  }
+                }
+              } catch {}
+              const isFinished = typeof percent === "number" ? percent >= 99 : false;
+              if (cfi) {
+                await setReadingProgress(Number(bookId), cfi, percent, isFinished);
+              }
+            } catch (err) {
+              console.warn("Failed to persist reading progress", err);
+            }
+          });
+        } catch {}
 
         console.log("Book rendered successfully");
       } catch (error) {

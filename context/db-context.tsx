@@ -20,6 +20,9 @@ export interface BookMetadata {
   rights?: string;
   modified_date?: string;
   coverBlob?: Blob; // Persisted cover image
+  readingCfi?: string; // Last read position
+  readingProgressPercent?: number; // 0-100
+  finished?: boolean; // true when book is completed
 }
 
 interface DBContextType {
@@ -32,6 +35,14 @@ interface DBContextType {
   getAllBookKeys: () => Promise<IDBValidKey[]>;
   hasBook: (id: number) => Promise<boolean>;
   deleteBook: (id: number) => Promise<void>;
+  setReadingProgress: (
+    id: number,
+    cfi: string,
+    percent?: number,
+    finished?: boolean
+  ) => Promise<void>;
+  getReadingProgress: (id: number) => Promise<string | undefined>;
+  clearReadingProgress: (id: number) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -42,7 +53,9 @@ const BOOKS_STORE_NAME = process.env.NEXT_PUBLIC_BOOKS_TABLE!;
 const METADATA_STORE_NAME = process.env.NEXT_PUBLIC_BOOKS_METADATA_TABLE!;
 
 const initializeDatabase = async () => {
-  return openDB(DB_NAME, 2, {
+  // Keep version at 3 to avoid downgrade errors for users who already opened v3
+  // We no longer create a separate progress store; progress is stored in metadata
+  return openDB(DB_NAME, 3, {
     upgrade(db) {
       // Create object stores if they do not already exist
       if (!db.objectStoreNames.contains(BOOKS_STORE_NAME)) {
@@ -176,9 +189,76 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
+  const setReadingProgress = async (
+    id: number,
+    cfi: string,
+    percent?: number,
+    finished?: boolean
+  ) => {
+    if (!dbImpl) throw new Error("Database not initialized");
+    try {
+      const existing = (await dbImpl.get(
+        METADATA_STORE_NAME,
+        id
+      )) as BookMetadata | undefined;
+      const updated: BookMetadata = {
+        title: existing?.title || "Untitled",
+        creator: existing?.creator || "",
+        series: existing?.series,
+        seriesIndex: existing?.seriesIndex,
+        description: existing?.description,
+        language: existing?.language,
+        publisher: existing?.publisher,
+        rights: existing?.rights,
+        modified_date: existing?.modified_date,
+        coverBlob: existing?.coverBlob,
+        readingCfi: cfi,
+        readingProgressPercent:
+          typeof percent === "number"
+            ? Math.max(0, Math.min(100, Math.round(percent)))
+            : existing?.readingProgressPercent,
+        finished: typeof finished === "boolean" ? finished : existing?.finished,
+      };
+      await dbImpl.put(METADATA_STORE_NAME, updated, id);
+    } catch (error) {
+      console.error("Error setting reading progress:", error);
+      throw error;
+    }
+  };
+
+  const getReadingProgress = async (id: number) => {
+    if (!dbImpl) throw new Error("Database not initialized");
+    try {
+      const existing = (await dbImpl.get(
+        METADATA_STORE_NAME,
+        id
+      )) as BookMetadata | undefined;
+      return existing?.readingCfi ?? undefined;
+    } catch (error) {
+      console.error("Error getting reading progress:", error);
+      throw error;
+    }
+  };
+
+  const clearReadingProgress = async (id: number) => {
+    if (!dbImpl) throw new Error("Database not initialized");
+    try {
+      const existing = (await dbImpl.get(
+        METADATA_STORE_NAME,
+        id
+      )) as BookMetadata | undefined;
+      if (!existing) return;
+      const { readingCfi, ...rest } = existing;
+      await dbImpl.put(METADATA_STORE_NAME, { ...rest }, id);
+    } catch (error) {
+      console.error("Error clearing reading progress:", error);
+      throw error;
+    }
+  };
+
   return (
     <DBContext.Provider
-      value={{ addBook, addBookMetadata, getBookMetadata, getAllBookMetadata, getBook, getAllBooks, getAllBookKeys, hasBook, deleteBook, isLoading }}
+      value={{ addBook, addBookMetadata, getBookMetadata, getAllBookMetadata, getBook, getAllBooks, getAllBookKeys, hasBook, deleteBook, setReadingProgress, getReadingProgress, clearReadingProgress, isLoading }}
     >
       {children}
     </DBContext.Provider>

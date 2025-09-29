@@ -92,7 +92,7 @@ export default function ReadPage() {
         </Button>
         <div>
           <h1 className="font-semibold">{title}</h1>
-          <p className="text-sm text-muted-foreground">{author}</p>
+          <p className="text-sm">By {author}</p>
         </div>
       </div>
       <div className="flex-1 h-full w-full">

@@ -35,11 +35,9 @@ const PRESETS: Array<{
   background: string;
   color: string;
 }> = [
-  { id: "default", name: "Default", font: "Inter", fontSize: 16, lineHeight: 1.6, background: "#ffffff", color: "#111111" },
   { id: "serif-day", name: "Serif Day", font: "Georgia", fontSize: 18, lineHeight: 1.7, background: "#fffdf7", color: "#1a1a1a" },
   { id: "serif-night", name: "Serif Night", font: "Georgia", fontSize: 18, lineHeight: 1.7, background: "#0b0b0b", color: "#f2f2f2" },
   { id: "newsprint", name: "Newsprint", font: "Charter", fontSize: 17, lineHeight: 1.65, background: "#f6f2e8", color: "#2b2b2b" },
-  { id: "dim", name: "Dim", font: "Inter", fontSize: 17, lineHeight: 1.7, background: "#1e1e1e", color: "#e6e6e6" },
   { id: "sepia", name: "Sepia", font: "Georgia", fontSize: 17, lineHeight: 1.65, background: "#f4ecd8", color: "#2a2a2a" },
 ];
 
@@ -90,7 +88,7 @@ export function ReaderSettings({ settings, onUpdate, triggerStyle, open, onOpenC
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label>Presets</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
               {PRESETS.map((p) => {
                 const selected = computedPresetId === p.id;
                 return (
@@ -109,12 +107,14 @@ export function ReaderSettings({ settings, onUpdate, triggerStyle, open, onOpenC
                         presetId: p.id,
                       })
                     }
-                    style={{ background: p.color, color: p.background, fontFamily: p.font }}
+                    style={{ background: p.background, color: p.color, fontFamily: p.font }}
                   >
+                    <div style={{ fontFamily: p.font }}>
                     <span className="inline-flex items-center gap-2">
                       {selected && <Check className="h-4 w-4" />}
                       <span>{p.name}</span>
                     </span>
+                    </div>
                   </Button>
                 );
               })}

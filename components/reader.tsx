@@ -132,36 +132,6 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setRendition(newRendition);
 
-        // Inject Google Fonts into each EPUB iframe so fonts render even if not installed locally
-        const googleFontHrefs: string[] = [
-          "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap",
-          "https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap",
-          "https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap",
-        ];
-        const injectFonts = (contents: any) => {
-          try {
-            googleFontHrefs.forEach((href) => {
-              const doc: Document | undefined = contents?.document;
-              if (!doc) return;
-              const existing = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).some(
-                (el) => el.getAttribute("href") === href
-              );
-              if (existing) return;
-              const link = doc.createElement("link");
-              link.setAttribute("rel", "stylesheet");
-              link.setAttribute("href", href);
-              doc.head.appendChild(link);
-            });
-          } catch {}
-        };
-        try {
-          // Register for future sections
-          (newRendition as any).hooks?.content?.register?.(injectFonts);
-          // Apply to already rendered contents
-          (newRendition as any).getContents?.().forEach(injectFonts);
-        } catch {}
-
-        // Load saved reading settings and apply before display
         try {
           const savedSettings = await getReadingSettings(Number(bookId));
           if (savedSettings) {

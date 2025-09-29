@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Book as EPub } from "epubjs";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { ReaderSettings } from "@/components/reader-settings";
 import { useDB } from "@/context/db-context";
 
@@ -32,6 +33,7 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
   const [rendition, setRendition] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState(() => ({
     fontSize: initialSettings?.fontSize ?? 16,
     lineHeight: initialSettings?.lineHeight ?? 1.6,
@@ -340,6 +342,39 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
     }
   };
 
+  // Keyboard handling for navigation and settings
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Avoid interfering when typing in inputs or editable elements
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+
+      // Cmd/Ctrl+K opens settings
+      if ((event.metaKey || event.ctrlKey) && (event.key === "k" || event.key === "K")) {
+        event.preventDefault();
+        setIsSettingsOpen(true);
+        return;
+      }
+
+      // Left/Right arrows for navigation
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        handlePrevious();
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        handleNext();
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, { passive: false } as any);
+    return () => window.removeEventListener("keydown", handleKeyDown as any);
+  }, [rendition]);
+
   // Add initial styles to the viewer ref when the component mounts
   useEffect(() => {
     if (viewerRef.current) {
@@ -383,11 +418,14 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
             }}
             variant="outline"
           >
-            Previous
+            <ArrowLeft size={16} className="mr-2" />
+            <span>Previous</span>
           </Button>
           <ReaderSettings
             settings={settings}
             onUpdate={updateSettings}
+            open={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
             triggerStyle={{
               background: settings.color,
               color: settings.background,
@@ -403,7 +441,8 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
             }}
             variant="outline"
           >
-            Next
+            <span>Next</span>
+            <ArrowRight size={16} className="ml-2" />
           </Button>
         </div>
     </div>

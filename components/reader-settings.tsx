@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,13 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Command } from "lucide-react";
 
 interface ReaderSettingsProps {
   settings: {
@@ -28,6 +23,8 @@ interface ReaderSettingsProps {
   };
   onUpdate: (settings: any) => void;
   triggerStyle?: React.CSSProperties;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const PRESETS: Array<{
@@ -47,13 +44,36 @@ const PRESETS: Array<{
   { id: "sepia", name: "Sepia", font: "Georgia", fontSize: 17, lineHeight: 1.65, background: "#f4ecd8", color: "#2a2a2a" },
 ];
 
-export function ReaderSettings({ settings, onUpdate, triggerStyle }: ReaderSettingsProps) {
+export function ReaderSettings({ settings, onUpdate, triggerStyle, open, onOpenChange }: ReaderSettingsProps) {
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
+    try {
+      const platform = (navigator as any)?.userAgentData?.platform || navigator.platform || "";
+      setIsMac(/Mac|iPhone|iPad|iPod/i.test(platform));
+    } catch {}
+  }, []);
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" style={triggerStyle}>Settings</Button>
+        <Button variant="outline" style={triggerStyle}>
+          <span>Settings</span>
+          <span className="ml-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs opacity-75 border" style={{ borderColor: triggerStyle?.borderColor }}>
+            {isMac ? (
+              <>
+                <Command className="h-4 w-4" />
+                <span>K</span>
+              </>
+            ) : (
+              <>
+                <span className="font-mono">Ctrl</span>
+                <span>+</span>
+                <span>K</span>
+              </>
+            )}
+          </span>
+        </Button>
       </DialogTrigger>
-      <DialogContent style={triggerStyle}>
+      <DialogContent style={{ ...triggerStyle, background: settings.color, color: settings.background, fontFamily: settings.font }}>
         <DialogHeader>
           <DialogTitle>Reading Settings</DialogTitle>
         </DialogHeader>
@@ -72,10 +92,11 @@ export function ReaderSettings({ settings, onUpdate, triggerStyle }: ReaderSetti
                       fontSize: p.fontSize,
                       lineHeight: p.lineHeight,
                       background: p.background,
-                  color: p.color,
+                      color: p.color,
                       presetId: p.id,
                     })
                   }
+                  style={{ background: p.color, color: p.background, fontFamily: p.font }}
                 >
                   {p.name}
                 </Button>

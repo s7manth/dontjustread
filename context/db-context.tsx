@@ -23,6 +23,7 @@ export interface BookMetadata {
   readingCfi?: string; // Last read position
   readingProgressPercent?: number; // 0-100
   finished?: boolean; // true when book is completed
+  contentHash?: string; // SHA-256 of file content for duplicate detection
   readingSettings?: {
     fontSize: number;
     lineHeight: number;

@@ -20,14 +20,14 @@ import { useDB } from "@/context/db-context";
 
 export function FileUploader({
   onUploadComplete,
+  onDuplicate,
 }: {
   onUploadComplete?: () => void;
+  onDuplicate?: () => void;
 }) {
   const [files, setFiles] = React.useState<File[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
-  const [title, setTitle] = React.useState("");
-  const [author, setAuthor] = React.useState("");
-  const { addBook, addBookMetadata } = useDB();
+  const { addBook, addBookMetadata, getAllBookMetadata } = useDB();
 
   const onFileReject = React.useCallback((file: File, message: string) => {
     toast(message, {
@@ -72,6 +72,27 @@ export function FileUploader({
         return;
       }
 
+      // Compute content hash for duplicate detection
+      const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const contentHash = hashArray
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      try {
+        const allMetadata = await getAllBookMetadata();
+        const duplicate = allMetadata.find(
+          (m) => (m as any)?.contentHash && (m as any).contentHash === contentHash,
+        ) as BookMetadata | undefined;
+        if (duplicate) {
+          setFiles([]);
+          onDuplicate?.();
+          return;
+        }
+      } catch (e) {
+        console.warn("Duplicate check failed:", e);
+      }
+
       const newBook = new EPub(reader.result as string);
       const rawMetadata = await newBook.loaded.metadata;
       const normalizedMetadata: BookMetadata = {
@@ -88,6 +109,7 @@ export function FileUploader({
         rights: (rawMetadata as any)?.rights || "",
         modified_date: (rawMetadata as any)?.modified_date || (rawMetadata as any)?.modified || "",
         coverBlob: undefined,
+        contentHash,
       };
 
       // Attempt to fetch cover from book state
@@ -112,8 +134,6 @@ export function FileUploader({
         console.warn("Unable to resolve cover:", e);
       }
 
-      setTitle(normalizedMetadata.title);
-      setAuthor(normalizedMetadata.creator);
       setIsUploading(true);
 
       try {
@@ -185,8 +205,6 @@ export function FileUploader({
           variant="outline"
           onClick={() => {
             setFiles([]);
-            setTitle("");
-            setAuthor("");
             onUploadComplete?.();
           }}
         >

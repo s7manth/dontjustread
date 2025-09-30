@@ -11,11 +11,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { FileUploader } from "@/components/file-uploader";
+import { toast } from "sonner";
 
 export function Header({
   onUploadComplete,
+  onDuplicate,
 }: {
   onUploadComplete?: () => void;
+  onDuplicate?: () => void;
 }) {
   const [open, setOpen] = React.useState(false);
 
@@ -38,6 +41,10 @@ export function Header({
             onUploadComplete={() => {
               setOpen(false);
               onUploadComplete?.();
+            }}
+            onDuplicate={() => {
+              setOpen(false);
+              onDuplicate?.();
             }}
           />
         </DialogContent>

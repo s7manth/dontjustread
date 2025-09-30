@@ -981,7 +981,7 @@ const FileUploadItem = React.forwardRef<HTMLDivElement, FileUploadItemProps>(
           {...itemProps}
           ref={forwardedRef}
           className={cn(
-            "relative flex items-center gap-2.5 rounded-md border p-3",
+            "relative flex items-center gap-2.5 rounded-md border p-3 w-full min-w-0",
             className,
           )}
         >
@@ -1155,7 +1155,7 @@ const FileUploadItemMetadata = React.forwardRef<
           <span
             id={itemContext.nameId}
             className={cn(
-              "truncate font-medium text-sm",
+              "break-all font-medium text-sm",
               size === "sm" && "font-normal text-[13px] leading-snug",
             )}
           >

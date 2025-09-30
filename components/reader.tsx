@@ -1,10 +1,15 @@
-import { useEffect, useRef, useState } from "react";
-import { Book as EPub } from "epubjs";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { ReaderSettings } from "@/components/reader-settings";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useDB } from "@/context/db-context";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Book as EPub } from "epubjs";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface ReaderProps {
   bookId: string;
@@ -28,7 +33,11 @@ interface ReaderProps {
   }) => void;
 }
 
-export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProps) {
+export function Reader({
+  bookId,
+  initialSettings,
+  onSettingsChange,
+}: ReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [book, setBook] = useState<EPub | null>(null);
   const [rendition, setRendition] = useState<any>(null);
@@ -58,7 +67,13 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
     presetId: initialSettings?.presetId ?? "default",
   }));
 
-  const { getBook, getReadingProgress, setReadingProgress, getReadingSettings, setReadingSettings } = useDB();
+  const {
+    getBook,
+    getReadingProgress,
+    setReadingProgress,
+    getReadingSettings,
+    setReadingSettings,
+  } = useDB();
 
   useEffect(() => {
     const loadBook = async () => {
@@ -119,7 +134,10 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
             await newBook.locations.generate(1000);
           }
         } catch (e) {
-          console.warn("Failed to generate locations; percentage may be unavailable", e);
+          console.warn(
+            "Failed to generate locations; percentage may be unavailable",
+            e,
+          );
         }
 
         setBook(newBook);
@@ -193,7 +211,7 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
           const startPosition = 1; // Skip cover page (index 0)
           console.log(
             "Displaying content starting from spine position:",
-            startPosition
+            startPosition,
           );
           await newRendition.display(spine[startPosition]?.href || 0);
         }
@@ -202,35 +220,43 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
 
         // Selection handling to show contextual popup
         try {
-          newRendition.on("selected", async (cfiRange: string, contents: any) => {
-            try {
-              const sel = contents?.window?.getSelection?.();
-              const selectedText = sel?.toString()?.trim() || "";
-              if (!selectedText) {
+          newRendition.on(
+            "selected",
+            async (cfiRange: string, contents: any) => {
+              try {
+                const sel = contents?.window?.getSelection?.();
+                const selectedText = sel?.toString()?.trim() || "";
+                if (!selectedText) {
+                  setSelectionPopup((prev) => ({ ...prev, visible: false }));
+                  return;
+                }
+                let rect: DOMRect | null = null;
+                try {
+                  rect = sel?.rangeCount
+                    ? sel.getRangeAt(0).getBoundingClientRect()
+                    : null;
+                } catch {}
+                const iframeEl = contents?.document?.defaultView
+                  ?.frameElement as HTMLIFrameElement | null;
+                const iframeRect = iframeEl
+                  ? iframeEl.getBoundingClientRect()
+                  : ({ left: 0, top: 0 } as any);
+                const margin = 8;
+                let x = (rect?.right || 0) + (iframeRect?.left || 0) + margin; // to the right of selection
+                let y = (rect?.top || 0) + (iframeRect?.top || 0); // align with top of selection
+                try {
+                  const vw = window.innerWidth || 0;
+                  const vh = window.innerHeight || 0;
+                  // basic clamping to keep popup in viewport
+                  x = Math.min(Math.max(0, x), Math.max(0, vw - 220));
+                  y = Math.min(Math.max(0, y), Math.max(0, vh - 120));
+                } catch {}
+                setSelectionPopup({ visible: true, x, y, text: selectedText });
+              } catch {
                 setSelectionPopup((prev) => ({ ...prev, visible: false }));
-                return;
               }
-              let rect: DOMRect | null = null;
-              try {
-                rect = sel?.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : null;
-              } catch {}
-              const iframeEl = contents?.document?.defaultView?.frameElement as HTMLIFrameElement | null;
-              const iframeRect = iframeEl ? iframeEl.getBoundingClientRect() : { left: 0, top: 0 } as any;
-              const margin = 8;
-              let x = (rect?.right || 0) + (iframeRect?.left || 0) + margin; // to the right of selection
-              let y = (rect?.top || 0) + (iframeRect?.top || 0); // align with top of selection
-              try {
-                const vw = window.innerWidth || 0;
-                const vh = window.innerHeight || 0;
-                // basic clamping to keep popup in viewport
-                x = Math.min(Math.max(0, x), Math.max(0, vw - 220));
-                y = Math.min(Math.max(0, y), Math.max(0, vh - 120));
-              } catch {}
-              setSelectionPopup({ visible: true, x, y, text: selectedText });
-            } catch {
-              setSelectionPopup((prev) => ({ ...prev, visible: false }));
-            }
-          });
+            },
+          );
 
           // Hide popup when clicking elsewhere
           newRendition.on("click", () => {
@@ -252,9 +278,15 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
                   }
                 }
               } catch {}
-              const isFinished = typeof percent === "number" ? percent >= 99 : false;
+              const isFinished =
+                typeof percent === "number" ? percent >= 99 : false;
               if (cfi) {
-                await setReadingProgress(Number(bookId), cfi, percent, isFinished);
+                await setReadingProgress(
+                  Number(bookId),
+                  cfi,
+                  percent,
+                  isFinished,
+                );
               }
             } catch (err) {
               console.warn("Failed to persist reading progress", err);
@@ -268,7 +300,7 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
         setError(
           `Error loading book: ${
             error instanceof Error ? error.message : String(error)
-          }`
+          }`,
         );
       } finally {
         setLoading(false);
@@ -365,7 +397,13 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
   };
 
   const openResultModal = (title: string) => {
-    setResultModal({ open: true, title, loading: true, error: null, content: null });
+    setResultModal({
+      open: true,
+      title,
+      loading: true,
+      error: null,
+      content: null,
+    });
   };
 
   const closeResultModal = () => {
@@ -373,17 +411,27 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
   };
 
   const handleDictionary = async () => {
-    const word = (selectionPopup.text || "").split(/\s+/)[0]?.replace(/[^a-zA-Z'-]/g, "").toLowerCase();
+    const word = (selectionPopup.text || "")
+      .split(/\s+/)[0]
+      ?.replace(/[^a-zA-Z'-]/g, "")
+      .toLowerCase();
     if (!word) return;
     openResultModal("Dictionary");
     try {
-      const res = await fetch(`/api/dictionary?word=${encodeURIComponent(word)}`, { method: "GET" });
+      const res = await fetch(
+        `/api/dictionary?word=${encodeURIComponent(word)}`,
+        { method: "GET" },
+      );
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
       const text: string = data?.text || JSON.stringify(data, null, 2);
       setResultModal((prev) => ({ ...prev, loading: false, content: text }));
     } catch (e: any) {
-      setResultModal((prev) => ({ ...prev, loading: false, error: e?.message || "Failed to fetch" }));
+      setResultModal((prev) => ({
+        ...prev,
+        loading: false,
+        error: e?.message || "Failed to fetch",
+      }));
     }
   };
 
@@ -402,7 +450,11 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
       const text: string = data?.text || JSON.stringify(data, null, 2);
       setResultModal((prev) => ({ ...prev, loading: false, content: text }));
     } catch (e: any) {
-      setResultModal((prev) => ({ ...prev, loading: false, error: e?.message || "Failed to fetch" }));
+      setResultModal((prev) => ({
+        ...prev,
+        loading: false,
+        error: e?.message || "Failed to fetch",
+      }));
     }
   };
 
@@ -411,12 +463,20 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
     const handleKeyDown = (event: KeyboardEvent) => {
       // Avoid interfering when typing in inputs or editable elements
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
         return;
       }
 
       // Cmd/Ctrl+K opens settings
-      if ((event.metaKey || event.ctrlKey) && (event.key === "k" || event.key === "K")) {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        (event.key === "k" || event.key === "K")
+      ) {
         event.preventDefault();
         setIsSettingsOpen(true);
         return;
@@ -435,7 +495,9 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown, { passive: false } as any);
+    window.addEventListener("keydown", handleKeyDown, {
+      passive: false,
+    } as any);
     return () => window.removeEventListener("keydown", handleKeyDown as any);
   }, [rendition]);
 
@@ -447,32 +509,35 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
   }, [settings]);
 
   return (
-      <div className="flex flex-col h-full w-full">
-        {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-            </div>
-          )}
-          {error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-              <div className="bg-destructive text-destructive-foreground p-4 rounded-md max-w-md">
-                <h3 className="font-bold mb-2">Error Loading Book</h3>
-                <p>{error}</p>
-              </div>
-            </div>
-          )}
+    <div className="flex h-full w-full flex-col">
+      {loading && (
+        <div className="bg-background absolute inset-0 z-10 flex items-center justify-center">
+          <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
+        </div>
+      )}
+      {error && (
+        <div className="bg-background/80 absolute inset-0 z-10 flex items-center justify-center">
+          <div className="bg-destructive text-destructive-foreground max-w-md rounded-md p-4">
+            <h3 className="mb-2 font-bold">Error Loading Book</h3>
+            <p>{error}</p>
+          </div>
+        </div>
+      )}
 
-      <div className="flex-1 relative" style={{ background: settings.background }}>
+      <div
+        className="relative flex-1"
+        style={{ background: settings.background }}
+      >
         <div ref={viewerRef} className="h-full w-full" />
 
         {selectionPopup.visible && (
           <div
-            className="fixed z-50 rounded-md border bg-background shadow-md text-sm"
+            className="bg-background fixed z-50 rounded-md border text-sm shadow-md"
             style={{ left: selectionPopup.x, top: selectionPopup.y }}
           >
             <div className="flex items-center">
               <button
-                className="px-3 py-2 hover:bg-accent"
+                className="hover:bg-accent px-3 py-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDictionary();
@@ -480,9 +545,9 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
               >
                 Dictionary
               </button>
-              <div className="h-5 w-px bg-border" />
+              <div className="bg-border h-5 w-px" />
               <button
-                className="px-3 py-2 hover:bg-accent"
+                className="hover:bg-accent px-3 py-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleContextual();
@@ -495,66 +560,71 @@ export function Reader({ bookId, initialSettings, onSettingsChange }: ReaderProp
         )}
       </div>
       <div
-          className="flex justify-between p-4"
+        className="flex justify-between p-4"
+        style={{
+          background: settings.background,
+          color: settings.color,
+          borderColor: settings.color,
+        }}
+      >
+        <Button
+          onClick={handlePrevious}
           style={{
-            background: settings.background,
-            color: settings.color,
+            background: settings.color,
+            color: settings.background,
             borderColor: settings.color,
           }}
+          variant="outline"
         >
-          <Button
-            onClick={handlePrevious}
-            style={{
-              background: settings.color,
-              color: settings.background,
-              borderColor: settings.color,
-            }}
-            variant="outline"
-          >
-            <ArrowLeft size={16} className="mr-2" />
-            <span>Previous</span>
-          </Button>
-          <ReaderSettings
-            settings={settings}
-            onUpdate={updateSettings}
-            open={isSettingsOpen}
-            onOpenChange={setIsSettingsOpen}
-            triggerStyle={{
-              background: settings.color,
-              color: settings.background,
-              borderColor: settings.color,
-            }}
-          />
-          <Button
-            onClick={handleNext}
-            style={{
-              background: settings.color,
-              color: settings.background,
-              borderColor: settings.color,
-            }}
-            variant="outline"
-          >
-            <span>Next</span>
-            <ArrowRight size={16} className="ml-2" />
-          </Button>
-        </div>
+          <ArrowLeft size={16} className="mr-2" />
+          <span>Previous</span>
+        </Button>
+        <ReaderSettings
+          settings={settings}
+          onUpdate={updateSettings}
+          open={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+          triggerStyle={{
+            background: settings.color,
+            color: settings.background,
+            borderColor: settings.color,
+          }}
+        />
+        <Button
+          onClick={handleNext}
+          style={{
+            background: settings.color,
+            color: settings.background,
+            borderColor: settings.color,
+          }}
+          variant="outline"
+        >
+          <span>Next</span>
+          <ArrowRight size={16} className="ml-2" />
+        </Button>
+      </div>
 
-        <Dialog open={resultModal.open} onOpenChange={(open) => (open ? setResultModal((p) => ({ ...p, open })) : closeResultModal())}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{resultModal.title}</DialogTitle>
-            </DialogHeader>
-            <div className="whitespace-pre-wrap text-sm max-h-[50vh] overflow-auto">
-              {resultModal.loading && <div>Loading...</div>}
-              {!resultModal.loading && resultModal.error && (
-                <div className="text-destructive">{resultModal.error}</div>
-              )}
-              {!resultModal.loading && !resultModal.error && (
-                <div>{resultModal.content}</div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+      <Dialog
+        open={resultModal.open}
+        onOpenChange={(open) =>
+          open ? setResultModal((p) => ({ ...p, open })) : closeResultModal()
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{resultModal.title}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[50vh] overflow-auto text-sm whitespace-pre-wrap">
+            {resultModal.loading && <div>Loading...</div>}
+            {!resultModal.loading && resultModal.error && (
+              <div className="text-destructive">{resultModal.error}</div>
+            )}
+            {!resultModal.loading && !resultModal.error && (
+              <div>{resultModal.content}</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

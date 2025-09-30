@@ -1,5 +1,6 @@
 "use client";
 
+import { openDB, IDBPDatabase } from "idb";
 import {
   createContext,
   useContext,
@@ -7,7 +8,6 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { openDB, IDBPDatabase } from "idb";
 
 export interface BookMetadata {
   title: string;
@@ -48,16 +48,16 @@ interface DBContextType {
     id: number,
     cfi: string,
     percent?: number,
-    finished?: boolean
+    finished?: boolean,
   ) => Promise<void>;
   getReadingProgress: (id: number) => Promise<string | undefined>;
   clearReadingProgress: (id: number) => Promise<void>;
   setReadingSettings: (
     id: number,
-    settings: NonNullable<BookMetadata["readingSettings"]>
+    settings: NonNullable<BookMetadata["readingSettings"]>,
   ) => Promise<void>;
   getReadingSettings: (
-    id: number
+    id: number,
   ) => Promise<BookMetadata["readingSettings"] | undefined>;
   isLoading: boolean;
 }
@@ -209,14 +209,13 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     id: number,
     cfi: string,
     percent?: number,
-    finished?: boolean
+    finished?: boolean,
   ) => {
     if (!dbImpl) throw new Error("Database not initialized");
     try {
-      const existing = (await dbImpl.get(
-        METADATA_STORE_NAME,
-        id
-      )) as BookMetadata | undefined;
+      const existing = (await dbImpl.get(METADATA_STORE_NAME, id)) as
+        | BookMetadata
+        | undefined;
       const updated: BookMetadata = {
         title: existing?.title || "Untitled",
         creator: existing?.creator || "",
@@ -245,14 +244,13 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const setReadingSettings = async (
     id: number,
-    settings: NonNullable<BookMetadata["readingSettings"]>
+    settings: NonNullable<BookMetadata["readingSettings"]>,
   ) => {
     if (!dbImpl) throw new Error("Database not initialized");
     try {
-      const existing = (await dbImpl.get(
-        METADATA_STORE_NAME,
-        id
-      )) as BookMetadata | undefined;
+      const existing = (await dbImpl.get(METADATA_STORE_NAME, id)) as
+        | BookMetadata
+        | undefined;
       const updated: BookMetadata = {
         title: existing?.title || "Untitled",
         creator: existing?.creator || "",
@@ -279,10 +277,9 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const getReadingSettings = async (id: number) => {
     if (!dbImpl) throw new Error("Database not initialized");
     try {
-      const existing = (await dbImpl.get(
-        METADATA_STORE_NAME,
-        id
-      )) as BookMetadata | undefined;
+      const existing = (await dbImpl.get(METADATA_STORE_NAME, id)) as
+        | BookMetadata
+        | undefined;
       return existing?.readingSettings ?? undefined;
     } catch (error) {
       console.error("Error getting reading settings:", error);
@@ -293,10 +290,9 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const getReadingProgress = async (id: number) => {
     if (!dbImpl) throw new Error("Database not initialized");
     try {
-      const existing = (await dbImpl.get(
-        METADATA_STORE_NAME,
-        id
-      )) as BookMetadata | undefined;
+      const existing = (await dbImpl.get(METADATA_STORE_NAME, id)) as
+        | BookMetadata
+        | undefined;
       return existing?.readingCfi ?? undefined;
     } catch (error) {
       console.error("Error getting reading progress:", error);
@@ -307,10 +303,9 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const clearReadingProgress = async (id: number) => {
     if (!dbImpl) throw new Error("Database not initialized");
     try {
-      const existing = (await dbImpl.get(
-        METADATA_STORE_NAME,
-        id
-      )) as BookMetadata | undefined;
+      const existing = (await dbImpl.get(METADATA_STORE_NAME, id)) as
+        | BookMetadata
+        | undefined;
       if (!existing) return;
       const { readingCfi, ...rest } = existing;
       await dbImpl.put(METADATA_STORE_NAME, { ...rest }, id);
@@ -322,7 +317,23 @@ export const DBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <DBContext.Provider
-      value={{ addBook, addBookMetadata, getBookMetadata, getAllBookMetadata, getBook, getAllBooks, getAllBookKeys, hasBook, deleteBook, setReadingProgress, getReadingProgress, clearReadingProgress, setReadingSettings, getReadingSettings, isLoading }}
+      value={{
+        addBook,
+        addBookMetadata,
+        getBookMetadata,
+        getAllBookMetadata,
+        getBook,
+        getAllBooks,
+        getAllBookKeys,
+        hasBook,
+        deleteBook,
+        setReadingProgress,
+        getReadingProgress,
+        clearReadingProgress,
+        setReadingSettings,
+        getReadingSettings,
+        isLoading,
+      }}
     >
       {children}
     </DBContext.Provider>

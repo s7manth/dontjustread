@@ -1,8 +1,7 @@
 "use client";
 
-import * as React from "react";
+import { FileUploader } from "@/components/file-uploader";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,8 +9,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { FileUploader } from "@/components/file-uploader";
-import { toast } from "sonner";
+import { PlusCircle } from "lucide-react";
+import * as React from "react";
 
 export function Header({
   onUploadComplete,
@@ -23,7 +22,7 @@ export function Header({
   const [open, setOpen] = React.useState(false);
 
   return (
-    <header className="w-full py-4 px-6 flex justify-between items-center">
+    <header className="flex w-full items-center justify-between px-6 py-4">
       <h1 className="text-xl font-bold">Don&apos;t Just Read</h1>
 
       <Dialog open={open} onOpenChange={setOpen}>

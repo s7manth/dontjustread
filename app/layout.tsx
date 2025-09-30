@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import { Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Analytics } from "@vercel/analytics/next";
-import { DBProvider } from "@/context/db-context";
 import { Toaster } from "@/components/ui/sonner";
+import { DBProvider } from "@/context/db-context";
+import { Analytics } from "@vercel/analytics/next";
+import type { Metadata } from "next";
+import { Poppins, JetBrains_Mono } from "next/font/google";
 
 const poppins = Poppins({
   variable: "--font-poppins",

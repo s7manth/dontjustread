@@ -11,12 +11,12 @@ import {
   FileUploadList,
   FileUploadTrigger,
 } from "@/components/ui/file-upload";
+import type { BookMetadata } from "@/context/db-context";
+import { useDB } from "@/context/db-context";
+import { Book as EPub } from "epubjs";
 import { Upload, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Book as EPub } from "epubjs";
-import type { BookMetadata } from "@/context/db-context";
-import { useDB } from "@/context/db-context";
 
 export function FileUploader({
   onUploadComplete,
@@ -82,7 +82,8 @@ export function FileUploader({
       try {
         const allMetadata = await getAllBookMetadata();
         const duplicate = allMetadata.find(
-          (m) => (m as any)?.contentHash && (m as any).contentHash === contentHash,
+          (m) =>
+            (m as any)?.contentHash && (m as any).contentHash === contentHash,
         ) as BookMetadata | undefined;
         if (duplicate) {
           setFiles([]);
@@ -98,16 +99,24 @@ export function FileUploader({
       const normalizedMetadata: BookMetadata = {
         title: (rawMetadata?.title || "").toString().trim(),
         creator: (rawMetadata?.creator || "").toString().trim(),
-        series: (rawMetadata as any)?.series ? (rawMetadata as any).series.toString().trim() : "",
+        series: (rawMetadata as any)?.series
+          ? (rawMetadata as any).series.toString().trim()
+          : "",
         seriesIndex:
-          (rawMetadata as any)?.seriesIndex !== undefined && (rawMetadata as any)?.seriesIndex !== null
-            ? String((rawMetadata as any).seriesIndex).toString().trim()
+          (rawMetadata as any)?.seriesIndex !== undefined &&
+          (rawMetadata as any)?.seriesIndex !== null
+            ? String((rawMetadata as any).seriesIndex)
+                .toString()
+                .trim()
             : "",
         description: (rawMetadata as any)?.description || "",
         language: (rawMetadata as any)?.language || "",
         publisher: (rawMetadata as any)?.publisher || "",
         rights: (rawMetadata as any)?.rights || "",
-        modified_date: (rawMetadata as any)?.modified_date || (rawMetadata as any)?.modified || "",
+        modified_date:
+          (rawMetadata as any)?.modified_date ||
+          (rawMetadata as any)?.modified ||
+          "",
         coverBlob: undefined,
         contentHash,
       };
@@ -116,7 +125,9 @@ export function FileUploader({
       try {
         // epubjs exposes cover via book.archive.createUrl(book.cover) or via resources
         // When using the constructor with ArrayBuffer, newBook.cover may be an href
-        const coverHref = (newBook as any)?.cover || (newBook as any)?.packaging?.metadata?.cover;
+        const coverHref =
+          (newBook as any)?.cover ||
+          (newBook as any)?.packaging?.metadata?.cover;
         if (coverHref) {
           const coverBlob: Blob | undefined = await (newBook as any).archive
             .createUrl(coverHref)
@@ -170,9 +181,9 @@ export function FileUploader({
         <FileUploadDropzone>
           <div className="flex flex-col items-center gap-1 text-center">
             <div className="flex items-center justify-center rounded-full border p-2.5">
-              <Upload className="size-6 text-muted-foreground" />
+              <Upload className="text-muted-foreground size-6" />
             </div>
-            <p className="font-medium text-sm">
+            <p className="text-sm font-medium">
               Drag & drop your ePub file here
             </p>
             <p className="text-muted-foreground text-xs">
@@ -200,7 +211,7 @@ export function FileUploader({
         </FileUploadList>
       </FileUpload>
 
-      <div className="flex justify-end gap-2 mt-4">
+      <div className="mt-4 flex justify-end gap-2">
         <Button
           variant="outline"
           onClick={() => {

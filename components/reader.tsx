@@ -1,4 +1,5 @@
 import { ReaderSettings } from "@/components/reader-settings";
+import { LoadingQuotes } from "@/components/loading-quotes";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -512,7 +513,7 @@ export function Reader({
     <div className="flex h-full w-full flex-col">
       {loading && (
         <div className="bg-background absolute inset-0 z-10 flex items-center justify-center">
-          <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
+          <LoadingQuotes />
         </div>
       )}
       {error && (
@@ -575,6 +576,7 @@ export function Reader({
             borderColor: settings.color,
           }}
           variant="outline"
+          className="text-xl"
         >
           <ArrowLeft size={16} className="mr-2" />
           <span>Previous</span>
@@ -598,6 +600,7 @@ export function Reader({
             borderColor: settings.color,
           }}
           variant="outline"
+          className="text-xl"
         >
           <span>Next</span>
           <ArrowRight size={16} className="ml-2" />

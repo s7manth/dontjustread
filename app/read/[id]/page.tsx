@@ -2,6 +2,7 @@
 
 import { Reader } from "@/components/reader";
 import { Button } from "@/components/ui/button";
+import { LoadingQuotes } from "@/components/loading-quotes";
 import { useDB } from "@/context/db-context";
 import { ChevronLeft } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -102,7 +103,7 @@ export default function ReadPage() {
         <Button
           variant="ghost"
           onClick={() => router.push("/")}
-          className="mr-4"
+          className="mr-4 text-xl"
           style={{
             background: headerStyle.color,
             color: headerStyle.background,
@@ -112,8 +113,8 @@ export default function ReadPage() {
           Back to Library
         </Button>
         <div>
-          <h1 className="font-semibold">{title}</h1>
-          <p className="text-sm">By {author}</p>
+          <h1 className="font-semibold text-xl">{title}</h1>
+          <p className="text-lg">By {author}</p>
         </div>
       </div>
       <div className="h-full w-full flex-1">

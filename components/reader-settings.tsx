@@ -103,7 +103,7 @@ export function ReaderSettings({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" style={triggerStyle}>
+        <Button variant="outline" style={triggerStyle} className="text-xl">
           <span>Settings</span>
           <span
             className="ml-2 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs opacity-75"
@@ -112,13 +112,13 @@ export function ReaderSettings({
             {isMac ? (
               <>
                 <Command className="h-4 w-4" />
-                <span>K</span>
+                <span className="text-xl">K</span>
               </>
             ) : (
               <>
-                <span className="font-mono">Ctrl</span>
-                <span>+</span>
-                <span>K</span>
+                <span className="font-mono text-xl">Ctrl</span>
+                <span className="text-xl">+</span>
+                <span className="text-xl">K</span>
               </>
             )}
           </span>
@@ -126,11 +126,11 @@ export function ReaderSettings({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Reading Settings</DialogTitle>
+          <DialogTitle className="text-2xl">Reading Settings</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label>Presets</Label>
+            <Label className="text-xl">Presets</Label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
               {PRESETS.map((p) => {
                 const selected = computedPresetId === p.id;
@@ -167,9 +167,10 @@ export function ReaderSettings({
               })}
             </div>
           </div>
+          <div className="h-1" />
           <div className="flex flex-row items-center justify-around">
             <div className="flex flex-col items-center space-y-2">
-              <Label>Font Size</Label>
+              <Label className="text-lg">Font Size</Label>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -203,7 +204,7 @@ export function ReaderSettings({
               </div>
             </div>
             <div className="flex flex-col items-center space-y-2">
-              <Label>Line Height</Label>
+              <Label className="text-lg">Line Height</Label>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"

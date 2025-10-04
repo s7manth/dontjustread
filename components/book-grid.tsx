@@ -108,19 +108,29 @@ export function BookGrid() {
             .map(({ key, book }) => (
               <Card
                 key={key.toString()}
-                className="h-full transition-shadow hover:shadow-lg"
+                className="h-full transition-shadow hover:shadow-lg p-2 px-0"
               >
                 <Link href={`/read/${key}`}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="line-clamp-2">{book.title}</CardTitle>
+                  <CardHeader className="flex flex-row justify-between pb-1">
+                    <CardTitle className="line-clamp-2 text-2xl">{book.title}</CardTitle>
+                    {book.finished ? (
+                      <div className="mt-1 flex items-center text-lg text-green-600">
+                        <CheckCircle2 className="mr-1 h-4 w-4" />
+                        Finished
+                      </div>
+                    ) : typeof book.progressPercent === "number" ? (
+                      <span className="text-muted-foreground mt-1 text-lg">
+                        {book.progressPercent}%
+                      </span>
+                    ) : null}
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-muted flex aspect-[2/3] items-center justify-center rounded-md">
+                    <div className="bg-muted flex aspect-[2/3] items-center justify-center rounded-md hover:shadow-lg">
                       {book.coverUrl ? (
                         <img
                           src={book.coverUrl}
                           alt={book.title}
-                          className="h-full w-full rounded-md object-cover"
+                          className="h-full w-full rounded-lg object-cover"
                         />
                       ) : (
                         <Book size={48} className="text-muted-foreground" />
@@ -129,49 +139,34 @@ export function BookGrid() {
                   </CardContent>
                 </Link>
                 <CardFooter className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-muted-foreground text-xl italic">
                       {book.author}
                     </p>
-                    {book.finished ? (
-                      <div className="mt-1 flex items-center text-xs text-green-600">
-                        <CheckCircle2 className="mr-1 h-4 w-4" />
-                        Finished
-                      </div>
-                    ) : typeof book.progressPercent === "number" ? (
-                      <span className="text-muted-foreground mt-1 text-xs">
-                        {book.progressPercent}%
-                      </span>
-                    ) : null}
-                  </div>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
                         aria-label="Delete book"
+                        className="p-2 text-md hover:bg-destructive/80 hover:text-destructive-foreground hover:text-white"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        Delete
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Delete this book?</DialogTitle>
-                      </DialogHeader>
-                      <p className="text-muted-foreground text-sm">
-                        This will remove the book from your library and delete
-                        it from the database.
-                      </p>
+                      <DialogTitle className="text-muted-foreground text-3xl font-bold">
+                        Are you sure? 🤔
+                      </DialogTitle>
                       <DialogFooter>
                         <DialogClose asChild>
-                          <Button variant="outline">Cancel</Button>
-                        </DialogClose>
+                          <Button variant="outline" className="text-2xl">No, nevermind</Button>
+                        </DialogClose> 
                         <DialogClose asChild>
                           <Button
                             variant="destructive"
                             onClick={() => handleDelete(key)}
+                            className="text-2xl"
                           >
-                            Delete
+                            Heck yeah!
                           </Button>
                         </DialogClose>
                       </DialogFooter>

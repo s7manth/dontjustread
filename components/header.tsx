@@ -23,12 +23,12 @@ export function Header({
 
   return (
     <header className="flex w-full items-center justify-between px-6 py-4">
-      <h1 className="text-xl font-bold">Don&apos;t Just Read</h1>
+      <h1 className="text-6xl font-bold">䷉dont just read</h1>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
+          <Button className="text-3xl" size="lg">
+            <PlusCircle className="mr-2 h-16 w-16" />
             Add a book
           </Button>
         </DialogTrigger>

@@ -4,11 +4,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { DBProvider } from "@/context/db-context";
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Poppins, JetBrains_Mono } from "next/font/google";
+import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
 
-const poppins = Poppins({
-  variable: "--font-poppins",
-  weight: ["300", "400", "500", "600", "700"],
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  weight: ["400"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${poppins.variable} ${jetBrainsMono.variable} font-sans antialiased`}
+        className={`${instrumentSerif.variable} ${jetBrainsMono.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"

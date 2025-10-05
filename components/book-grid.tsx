@@ -94,8 +94,8 @@ export function BookGrid() {
           <div className="mb-4 flex justify-center">
             <Book size={48} className="text-muted-foreground" />
           </div>
-          <h3 className="mb-2 text-xl font-medium">No books yet</h3>
-          <p className="text-muted-foreground mb-4">
+          <h3 className="mb-2 text-2xl font-medium">No books yet</h3>
+          <p className="text-muted-foreground mb-4 text-2xl">
             Upload your first ePub book to get started
           </p>
         </div>

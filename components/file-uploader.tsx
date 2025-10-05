@@ -72,7 +72,7 @@ export function FileUploader({
         return;
       }
 
-      // Compute content hash for duplicate detection
+      // compute content hash for duplicate detection
       const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const contentHash = hashArray
@@ -183,15 +183,15 @@ export function FileUploader({
             <div className="flex items-center justify-center rounded-full border p-2.5">
               <Upload className="text-muted-foreground size-6" />
             </div>
-            <p className="text-sm font-medium">
+            <p className="text-2xl font-medium">
               Drag & drop your ePub file here
             </p>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-2xl">
               Or click to browse (max 1 file, up to 50MB)
             </p>
           </div>
           <FileUploadTrigger asChild>
-            <Button variant="outline" size="sm" className="mt-2 w-fit">
+            <Button variant="outline" size="lg" className="mt-2 w-fit text-2xl">
               Browse files
             </Button>
           </FileUploadTrigger>
@@ -214,6 +214,8 @@ export function FileUploader({
       <div className="mt-4 flex justify-end gap-2">
         <Button
           variant="outline"
+          size="lg"
+          className="text-2xl"
           onClick={() => {
             setFiles([]);
             onUploadComplete?.();
@@ -222,6 +224,8 @@ export function FileUploader({
           Cancel
         </Button>
         <Button
+          className="text-2xl" 
+          size="lg"
           onClick={handleUpload}
           disabled={files.length === 0 || isUploading}
         >

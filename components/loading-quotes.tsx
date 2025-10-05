@@ -101,10 +101,10 @@ export function LoadingQuotes() {
   const currentQuote = quotes[currentQuoteIndex];
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-muted from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="mb-8 relative">
-        <div className="w-12 h-12 border-4 border-slate-200 dark:border-slate-700 rounded-full animate-spin border-t-rose-700 dark:border-t-blue-400"></div>
-        <div className="absolute inset-0 w-12 h-12 border-4 border-transparent rounded-full animate-spin border-r-rose-700 dark:border-r-blue-300" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+        <div className="w-12 h-12 border-4 border-slate-200 dark:border-slate-700 rounded-full animate-spin border-t-rose-700 dark:border-t-rose-700"></div>
+        <div className="absolute inset-0 w-12 h-12 border-4 border-transparent rounded-full animate-spin border-r-rose-700 dark:border-r-rose-700" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
       </div>
 
       <div className="max-w-2xl px-8 text-center">
@@ -130,18 +130,14 @@ export function LoadingQuotes() {
         </div>
       </div>
 
-      <div className="mt-8 text-lg text-slate-500 dark:text-slate-400 animate-pulse">
-        Loading your book...
-      </div>
-
       <div className="mt-4 flex space-x-2">
         {quotes.map((_, index) => (
           <div
             key={index}
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
               index === currentQuoteIndex
-                ? 'bg-rose-700 dark:bg-blue-400 scale-125'
-                : 'bg-slate-300 dark:bg-slate-600'
+                ? 'bg-rose-700 dark:bg-rose-700 scale-125'
+                : 'bg-primary/30 dark:bg-primary/30'
             }`}
           />
         ))}

@@ -56,7 +56,7 @@ const PRESETS: Array<{
   {
     id: "newsprint",
     name: "Newsprint",
-    font: "Charter",
+    font: "Noto Serif",
     fontSize: 17,
     lineHeight: 1.65,
     background: "#f6f2e8",

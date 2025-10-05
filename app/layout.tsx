@@ -21,8 +21,8 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Don't Just Read",
-  description: "A better way to read books",
+  title: "dont just read",
+  description: "a better way to read books",
 };
 
 export default function RootLayout({

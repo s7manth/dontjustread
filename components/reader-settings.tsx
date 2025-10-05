@@ -65,7 +65,7 @@ const PRESETS: Array<{
   {
     id: "sepia",
     name: "Sepia",
-    font: "Georgia",
+    font: "Arbutus Slab",
     fontSize: 17,
     lineHeight: 1.65,
     background: "#f4ecd8",
